@@ -4,224 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f766e">
-    <meta name="description" content="Aplikasi Pemantau Ibadah & Kesehatan Harian">
-    <title>Habit Tracker Pro</title>
+    <meta name="description" content="Aplikasi Pemantau Ibadah & Kesehatan Harian dengan Cloud Sync">
+    <title>Muslim Habit Tracker Pro</title>
     
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- Tailwind + Font Awesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        /* Animasi */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-bg { animation: fadeIn 0.3s ease-out; }
-        .modal-box { animation: slideUp 0.3s ease-out; }
+    
+    <!-- Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot, writeBatch, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        .accordion-content { transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
-        .accordion-content.open { max-height: 2500px; opacity: 1; }
-        .chevron { transition: transform 0.3s; }
-        .chevron.rotate { transform: rotate(180deg); }
+        // ======================== KONFIGURASI FIREBASE ========================
+        // GANTI DENGAN DATA PROJECT ANDA DARI FIREBASE CONSOLE
+        const firebaseConfig = {
+            apiKey: "AIzaSyALR5_ku0j9TcCguUM8S2HujnYpsh_nj",  // GANTI!
+            authDomain: "habit-tracker-5258f.firebaseapp.com", // GANTI!
+            projectId: "habit-tracker-5258f",                // GANTI!
+            storageBucket: "habit-tracker-5258f.firebasestorage.app",// GANTI!
+            messagingSenderId: "857648541500",              // GANTI!
+            appId: 1:857648541500:web:0d223a88e9645cea1a7839",
+  measurementId: "G-W7KTFBYDSV"        // GANTI!
+        };
+        // ======================================================================
 
-        /* Tombol & Interaksi */
-        .prayer-circle { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
-        .prayer-circle:active { transform: scale(0.9); }
-        .wajib.active { background-color: #0f766e; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.4); }
-        .sunnah-circle.active { background-color: #d97706; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4); }
-        .inactive { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        
-        .click-area { cursor: pointer; position: relative; z-index: 10; touch-action: manipulation; }
-        .click-area:active { background-color: #f1f5f9; transform: scale(0.99); }
-    </style>
-</head>
-<body class="bg-slate-100 min-h-screen pb-32 relative">
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const db = getFirestore(app);
 
-    <div id="data-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
-        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full relative modal-box">
-            <button onclick="closeModal('data-modal')" class="absolute top-3 right-4 text-slate-300 hover:text-slate-500"><i class="fas fa-times"></i></button>
-            <h3 class="text-lg font-bold text-slate-800 mb-1 text-center">Amankan Data</h3>
-            <p class="text-xs text-slate-500 text-center mb-6">Simpan progress ke memori HP.</p>
-            <div class="space-y-3">
-                <button onclick="backupData()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-3 transition">
-                    <i class="fas fa-download text-teal-600"></i><span class="font-semibold text-sm">Backup (Simpan File)</span>
-                </button>
-                <button onclick="document.getElementById('file-input').click()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-3 transition">
-                    <i class="fas fa-upload text-blue-600"></i><span class="font-semibold text-sm">Restore (Buka File)</span>
-                </button>
-                <input type="file" id="file-input" class="hidden" accept=".json" onchange="restoreData(this)">
-                <button onclick="resetData()" class="w-full border border-red-200 text-red-500 hover:bg-red-50 py-3 rounded-xl flex items-center justify-center gap-3 transition mt-4">
-                    <i class="fas fa-trash-alt"></i><span class="font-semibold text-sm">Reset Semua Data</span>
-                </button>
-            </div>
-        </div>
-    </div>
+        // Aktifkan offline persistence (cache otomatis)
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn("Multiple tabs open, persistence can only be enabled in one tab.");
+            } else if (err.code === 'unimplemented') {
+                console.warn("Browser doesn't support persistence");
+            }
+        });
 
-    <div id="notif-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
-        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center modal-box">
-            <div class="w-14 h-14 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-bell text-2xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-slate-800 mb-2">Aktifkan Pengingat?</h3>
-            <p class="text-sm text-slate-600 mb-6">Kami akan mengingatkan waktu shalat & istirahat.</p>
-            <div class="flex gap-3">
-                <button onclick="closeModal('notif-modal')" class="flex-1 py-2 px-4 border border-slate-300 rounded-xl text-slate-600">Nanti</button>
-                <button onclick="confirmNotification()" class="flex-1 py-2 px-4 bg-teal-600 text-white rounded-xl shadow-md">Ya, Aktifkan</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.6);">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full relative modal-box overflow-hidden">
-            <button onclick="closeModal('report-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
-            <h3 class="text-xl font-bold text-slate-800 mb-1 text-center">Laporan Mingguan</h3>
-            <p class="text-xs text-slate-500 text-center mb-6">Konsistensi 7 Hari Terakhir</p>
-            <div class="flex justify-center items-center mb-6">
-                <div class="w-32 h-32 rounded-full border-8 border-teal-100 flex items-center justify-center relative">
-                    <span id="modal-score" class="text-4xl font-bold text-teal-600">0%</span>
-                    <i class="fas fa-heartbeat absolute -bottom-2 text-2xl text-red-500"></i>
-                </div>
-            </div>
-            <p id="modal-msg" class="text-center text-sm font-medium text-slate-700 mb-6 bg-slate-50 p-3 rounded-lg">...</p>
-            <button onclick="shareToWhatsApp()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition">
-                <i class="fab fa-whatsapp text-xl"></i> Bagikan Laporan
-            </button>
-        </div>
-    </div>
-
-    <div id="status-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
-        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center modal-box relative">
-            <div id="status-icon-bg" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i id="status-icon" class="fas fa-check text-2xl"></i>
-            </div>
-            <h3 id="status-title" class="text-lg font-bold text-slate-800 mb-2">Judul</h3>
-            <p id="status-msg" class="text-sm text-slate-600 mb-6">Pesan.</p>
-            <button onclick="closeModal('status-modal')" class="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200">Oke</button>
-        </div>
-    </div>
-
-    <div class="bg-teal-700 text-white p-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden mb-6">
-        <div class="relative z-10">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Moeslem Daily Tracker</h1>
-                    <p class="text-teal-200 text-xs mt-1 opacity-90" id="current-date">...</p>
-                </div>
-                <button onclick="openModal('data-modal')" class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center border border-teal-500 shadow-sm active:scale-95 transition">
-                    <i class="fas fa-cog text-teal-100 text-sm"></i>
-                </button>
-            </div>
-        </div>
-        <i class="fas fa-leaf absolute -right-8 -bottom-8 text-9xl text-teal-800 opacity-20 transform rotate-12"></i>
-    </div>
-
-    <div class="max-w-md mx-auto px-4 relative z-20">
-        
-        <div class="bg-white rounded-2xl p-5 shadow-sm mb-5 border border-slate-100">
-            <div class="flex justify-between items-end mb-3">
-                <div>
-                    <span class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Produktivitas Hari Ini</span>
-                    <div class="text-4xl font-extrabold text-slate-800 mt-1" id="progress-text">0%</div>
-                </div>
-                <div id="progress-icon-container" class="h-10 w-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600 transition-colors">
-                    <i class="fas fa-chart-pie text-lg"></i>
-                </div>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2">
-                <div id="progress-bar" class="bg-teal-500 h-2 rounded-full transition-all duration-700 shadow-[0_0_10px_rgba(20,184,166,0.5)]" style="width: 0%"></div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3 mb-8">
-            <button onclick="showReport()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-slate-50 active:scale-95 transition">
-                <div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fas fa-calendar-alt text-xs"></i></div>
-                <span class="text-[10px] font-bold text-slate-600 uppercase">Laporan</span>
-            </button>
-            <button onclick="shareToWhatsApp()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-slate-50 active:scale-95 transition">
-                <div class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><i class="fas fa-share-nodes text-xs"></i></div>
-                <span class="text-[10px] font-bold text-slate-600 uppercase">Bagikan</span>
-            </button>
-            <button onclick="checkNotificationStatus(true)" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-slate-50 active:scale-95 transition">
-                <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center"><i class="fas fa-bell text-xs"></i></div>
-                <span class="text-[10px] font-bold text-slate-600 uppercase">Ingatkan</span>
-            </button>
-        </div>
-
-        <div class="space-y-4 pb-8">
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <button onclick="toggleSection('section-ibadah')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 group-hover:bg-teal-100 transition">
-                            <i class="fas fa-mosque"></i>
-                        </div>
-                        <div class="text-left">
-                            <h3 class="font-bold text-slate-800">Ibadah & Sunnah</h3>
-                            <span id="count-ibadah" class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span>
-                        </div>
-                    </div>
-                    <i id="chevron-section-ibadah" class="fas fa-chevron-down text-slate-300 chevron"></i>
-                </button>
-                <div id="section-ibadah" class="accordion-content bg-slate-50">
-                    <div class="p-5 space-y-6">
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Wajib Berjamaah</span>
-                                <i class="fas fa-check-double text-teal-500 text-xs"></i>
-                            </div>
-                            <div class="flex justify-between items-start" id="prayer-wajib-container"></div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                            <div class="absolute top-0 right-0 w-16 h-16 bg-orange-100 rounded-bl-full -mr-8 -mt-8 opacity-50 z-0"></div>
-                            <div class="flex items-center justify-between mb-4 relative z-10">
-                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Sunnah Utama</span>
-                                <i class="fas fa-star text-orange-400 text-xs"></i>
-                            </div>
-                            <div class="flex justify-between items-start relative z-10" id="prayer-sunnah-container"></div>
-                        </div>
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2 pl-1">Ibadah Tambahan</h4>
-                        <div id="list-ibadah-extra" class="space-y-2 relative z-10"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <button onclick="toggleSection('section-kesehatan')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition">
-                            <i class="fas fa-heart-pulse"></i>
-                        </div>
-                        <div class="text-left">
-                            <h3 class="font-bold text-slate-800">Kesehatan (Medis)</h3>
-                            <span id="count-kesehatan" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span>
-                        </div>
-                    </div>
-                    <i id="chevron-section-kesehatan" class="fas fa-chevron-down text-slate-300 chevron"></i>
-                </button>
-                <div id="section-kesehatan" class="accordion-content bg-slate-50">
-                    <div class="p-5 space-y-2 relative z-10" id="list-kesehatan"></div>
-                    <div class="px-5 pb-5">
-                        <p class="text-[10px] text-slate-400 italic text-center mt-2">*Sumber: AHA, Harvard Health, & Sleep Foundation.</p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        
-        <div class="text-center py-6 border-t border-slate-200 mt-4 mb-safe">
-            <p class="text-[10px] text-slate-400 mb-3">Designed for Istiqomah</p>
-            <a href="https://wa.me/6281775700114" target="_blank" class="inline-flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-full shadow-sm text-xs font-semibold text-slate-600 hover:text-teal-600 hover:border-teal-200 transition active:scale-95">
-                <i class="fab fa-whatsapp text-lg text-green-500"></i>
-                <span>Hubungi Developer</span>
-            </a>
-        </div>
-
-    </div>
-
-    <script>
-        // --- DATA SETUP ---
+        // Data master habit (sama seperti sebelumnya)
         const prayerWajib = [
             { id: 'subuh', label: 'S', name: 'Subuh' }, { id: 'dzuhur', label: 'D', name: 'Dzuhur' },
             { id: 'ashar', label: 'A', name: 'Ashar' }, { id: 'maghrib', label: 'M', name: 'Maghrib' }, { id: 'isya', label: 'I', name: 'Isya' }
@@ -241,66 +71,296 @@
             { id: 'gerak', text: 'Jalan Kaki/Cardio 30 Mnt', desc: 'Kesehatan Jantung (AHA)', icon: 'fa-person-walking' },
             { id: 'diet', text: 'Diet Whole Food (Sayur/Buah)', desc: 'Hindari makanan olahan', icon: 'fa-carrot' }
         ];
+        const allHabits = [...prayerWajib, ...prayerSunnah, ...ibadahExtra, ...healthHabits];
 
-        const alarmSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-
+        // Helper: tanggal hari ini YYYY-MM-DD
         function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
-        function renderApp() {
-            const todayKey = getTodayKey();
-            let data = JSON.parse(localStorage.getItem(todayKey)) || {};
+        // Variabel global
+        let currentUser = null;
+        let currentDailyData = {};      // data habit untuk hari ini
+        let currentJournal = "";
+        let unsubscribeDaily = null;
+        let streakValue = 0;
+        let weeklyScores = [0,0,0,0,0,0,0]; // 7 hari terakhir
+        let chart = null;
 
+        // Elemen DOM
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const userAvatar = document.getElementById('user-avatar');
+        const userNameSpan = document.getElementById('user-name');
+        const logoutBtn = document.getElementById('logout-btn');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const streakBadge = document.getElementById('streak-badge');
+        const journalTextarea = document.getElementById('journal-textarea');
+        const saveJournalBtn = document.getElementById('save-journal');
+        const prayerWajibContainer = document.getElementById('prayer-wajib-container');
+        const prayerSunnahContainer = document.getElementById('prayer-sunnah-container');
+        const listIbadahExtra = document.getElementById('list-ibadah-extra');
+        const listKesehatan = document.getElementById('list-kesehatan');
+        const countIbadahSpan = document.getElementById('count-ibadah');
+        const countKesehatanSpan = document.getElementById('count-kesehatan');
+        const currentDateSpan = document.getElementById('current-date');
+
+        // Fungsi hitung streak (definisi: semua wajib terpenuhi + minimal 3 dari sunnah & kesehatan)
+        function calculateStreak(dailyDataList) {
+            // dailyDataList adalah array objek { date, data } terurut descending (terbaru dulu)
+            let streak = 0;
+            for (let day of dailyDataList) {
+                const data = day.data;
+                // Cek semua shalat wajib
+                const allWajib = prayerWajib.every(p => data[p.id] === true);
+                // Hitung total sunnah + kesehatan yang tercentang
+                const sunnahHealthIds = [...prayerSunnah, ...ibadahExtra, ...healthHabits].map(h => h.id);
+                let countSunnahHealth = 0;
+                for (let id of sunnahHealthIds) if (data[id] === true) countSunnahHealth++;
+                if (allWajib && countSunnahHealth >= 3) streak++;
+                else break;
+            }
+            return streak;
+        }
+
+        // Hitung persentase hari ini
+        function computePercent(data) {
+            let total = 0, done = 0;
+            allHabits.forEach(h => { total++; if (data[h.id]) done++; });
+            return total ? Math.round((done/total)*100) : 0;
+        }
+
+        // Render semua habit UI berdasarkan currentDailyData
+        function renderUI() {
+            if (!currentDailyData) currentDailyData = {};
+            const data = currentDailyData;
+            
             // Wajib
-            document.getElementById('prayer-wajib-container').innerHTML = prayerWajib.map(p => {
+            prayerWajibContainer.innerHTML = prayerWajib.map(p => {
                 const active = data[p.id] ? 'active' : 'inactive';
-                return `<div class="flex flex-col items-center gap-1"><button onclick="toggleHabit('${p.id}')" class="prayer-circle wajib ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
+                return `<div class="flex flex-col items-center gap-1"><button onclick="window.toggleHabit('${p.id}')" class="prayer-circle wajib ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
             }).join('');
-
+            
             // Sunnah
-            document.getElementById('prayer-sunnah-container').innerHTML = prayerSunnah.map(p => {
+            prayerSunnahContainer.innerHTML = prayerSunnah.map(p => {
                 const active = data[p.id] ? 'active' : 'inactive';
-                return `<div class="flex flex-col items-center gap-1"><button onclick="toggleHabit('${p.id}')" class="prayer-circle sunnah-circle ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
+                return `<div class="flex flex-col items-center gap-1"><button onclick="window.toggleHabit('${p.id}')" class="prayer-circle sunnah-circle ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
             }).join('');
-
-            // Extra
-            document.getElementById('list-ibadah-extra').innerHTML = ibadahExtra.map(h => {
+            
+            // Ibadah extra
+            listIbadahExtra.innerHTML = ibadahExtra.map(h => {
                 const activeStyle = data[h.id] ? 'border-teal-200 bg-teal-50' : 'border-slate-100';
                 const iconClass = data[h.id] ? 'bg-teal-500 border-teal-500' : 'bg-white';
                 const svgClass = data[h.id] ? 'block' : 'hidden';
-                return `<div onclick="toggleHabit('${h.id}')" class="click-area flex items-center bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
+                return `<div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-center bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
                     <div class="relative pointer-events-none"><div class="w-5 h-5 border-2 border-slate-300 rounded-[6px] transition flex items-center justify-center ${iconClass}"><svg class="w-3 h-3 text-white ${svgClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></div>
                     <span class="ml-3 flex-1 text-slate-700 text-sm font-medium">${h.text}</span><i class="fas ${h.icon} text-slate-300 text-sm"></i></div>`;
             }).join('');
-
-            // Health
-            document.getElementById('list-kesehatan').innerHTML = healthHabits.map(h => {
+            
+            // Kesehatan
+            listKesehatan.innerHTML = healthHabits.map(h => {
                 const activeStyle = data[h.id] ? 'border-blue-200 bg-blue-50' : 'border-slate-100';
                 const iconClass = data[h.id] ? 'bg-blue-500 border-blue-500' : 'bg-white';
                 const svgClass = data[h.id] ? 'block' : 'hidden';
-                return `<div onclick="toggleHabit('${h.id}')" class="click-area flex items-start bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
+                return `<div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-start bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
                     <div class="relative mt-1 pointer-events-none"><div class="w-5 h-5 border-2 border-slate-300 rounded-[6px] transition flex items-center justify-center ${iconClass}"><svg class="w-3 h-3 text-white ${svgClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></div>
                     <div class="ml-3 flex-1"><span class="block text-slate-700 text-sm font-semibold leading-tight">${h.text}</span><span class="block text-[10px] text-slate-400 mt-1">${h.desc}</span></div><i class="fas ${h.icon} text-slate-300 text-sm mt-1"></i></div>`;
             }).join('');
-
-            // Stats
-            const totalItems = prayerWajib.length + prayerSunnah.length + ibadahExtra.length + healthHabits.length;
-            let totalDone = 0;
-            [...prayerWajib, ...prayerSunnah, ...ibadahExtra, ...healthHabits].forEach(i => { if(data[i.id]) totalDone++; });
-            const percent = Math.round((totalDone / totalItems) * 100);
-
-            document.getElementById('count-ibadah').innerText = `${[...prayerWajib, ...prayerSunnah, ...ibadahExtra].filter(i=>data[i.id]).length}/${prayerWajib.length + prayerSunnah.length + ibadahExtra.length}`;
-            document.getElementById('count-kesehatan').innerText = `${healthHabits.filter(i=>data[i.id]).length}/${healthHabits.length}`;
-            document.getElementById('progress-bar').style.width = percent + '%';
-            document.getElementById('progress-text').innerText = percent + '%';
+            
+            // Hitung statistik
+            const totalIbadah = prayerWajib.length + prayerSunnah.length + ibadahExtra.length;
+            const doneIbadah = [...prayerWajib, ...prayerSunnah, ...ibadahExtra].filter(h => data[h.id]).length;
+            countIbadahSpan.innerText = `${doneIbadah}/${totalIbadah}`;
+            const doneKesehatan = healthHabits.filter(h => data[h.id]).length;
+            countKesehatanSpan.innerText = `${doneKesehatan}/${healthHabits.length}`;
+            
+            const percent = computePercent(data);
+            progressText.innerText = percent + '%';
+            progressBar.style.width = percent + '%';
             const iconCont = document.getElementById('progress-icon-container');
             if(percent === 100) iconCont.className = "h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600";
             else if(percent > 50) iconCont.className = "h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600";
             else iconCont.className = "h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400";
             
-            localStorage.setItem(todayKey + '_score', percent);
+            // Update jurnal
+            journalTextarea.value = currentJournal || "";
         }
 
-        function toggleHabit(id) { const k = getTodayKey(); let d = JSON.parse(localStorage.getItem(k)) || {}; d[id] = !d[id]; localStorage.setItem(k, JSON.stringify(d)); renderApp(); }
+        // Simpan data harian ke Firestore (toggle atau jurnal)
+        async function saveDailyToFirestore(uid, date, newData, newJournal) {
+            const docRef = doc(db, 'users', uid, 'daily', date);
+            const updateObj = {
+                data: newData,
+                updatedAt: new Date().toISOString(),
+                date: date
+            };
+            if (newJournal !== undefined) updateObj.journal = newJournal;
+            await setDoc(docRef, updateObj, { merge: true });
+        }
+
+        // Toggle habit (dipanggil dari onclick global)
+        window.toggleHabit = async (habitId) => {
+            if (!currentUser) return;
+            const today = getTodayKey();
+            const newData = { ...currentDailyData };
+            newData[habitId] = !newData[habitId];
+            currentDailyData = newData;
+            renderUI();
+            // Simpan ke Firestore (akan sync offline otomatis)
+            await saveDailyToFirestore(currentUser.uid, today, newData, currentJournal);
+            // Refresh streak & weekly setelah perubahan
+            await updateStreakAndWeekly();
+        };
+
+        // Simpan jurnal
+        async function saveJournal() {
+            if (!currentUser) return;
+            const newJournal = journalTextarea.value;
+            currentJournal = newJournal;
+            const today = getTodayKey();
+            await saveDailyToFirestore(currentUser.uid, today, currentDailyData, newJournal);
+            showStatusModal("Jurnal", "Catatan tersimpan", "success");
+        }
+
+        // Update streak badge dan weekly scores
+        async function updateStreakAndWeekly() {
+            if (!currentUser) return;
+            const uid = currentUser.uid;
+            const today = new Date();
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                let d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                last7Days.push(dateStr);
+            }
+            // Ambil dokumen untuk 7 hari terakhir
+            const promises = last7Days.map(date => getDoc(doc(db, 'users', uid, 'daily', date)));
+            const snapshots = await Promise.all(promises);
+            const dailyList = [];
+            for (let i=0; i<last7Days.length; i++) {
+                const snap = snapshots[i];
+                if (snap.exists()) {
+                    const d = snap.data();
+                    dailyList.push({ date: last7Days[i], data: d.data, score: computePercent(d.data) });
+                    weeklyScores[i] = computePercent(d.data);
+                } else {
+                    weeklyScores[i] = 0;
+                    dailyList.push({ date: last7Days[i], data: {}, score: 0 });
+                }
+            }
+            // Hitung streak dari data historis (urut descending)
+            const sortedDesc = [...dailyList].reverse();
+            streakValue = calculateStreak(sortedDesc);
+            streakBadge.innerHTML = `<i class="fas fa-fire text-orange-500 mr-1"></i> Streak ${streakValue} hari`;
+            // Update chart jika ada
+            if (chart) {
+                chart.data.datasets[0].data = weeklyScores;
+                chart.update();
+            }
+        }
+
+        // Subscribe ke dokumen hari ini & realtime
+        function subscribeToToday(uid) {
+            if (unsubscribeDaily) unsubscribeDaily();
+            const today = getTodayKey();
+            const docRef = doc(db, 'users', uid, 'daily', today);
+            unsubscribeDaily = onSnapshot(docRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    currentDailyData = data.data || {};
+                    currentJournal = data.journal || "";
+                } else {
+                    currentDailyData = {};
+                    currentJournal = "";
+                }
+                renderUI();
+                updateStreakAndWeekly();
+            });
+        }
+
+        // Migrasi dari localStorage ke Firestore untuk user tertentu
+        async function migrateLocalStorageToFirestore(uid) {
+            const userDocRef = doc(db, 'users', uid);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists() && userSnap.data().migrated === true) return false;
+            
+            // Scan semua key localStorage yang berbentuk tanggal YYYY-MM-DD
+            let migratedCount = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const raw = localStorage.getItem(key);
+                    try {
+                        const dataObj = JSON.parse(raw);
+                        const date = key;
+                        const docRef = doc(db, 'users', uid, 'daily', date);
+                        await setDoc(docRef, {
+                            data: dataObj,
+                            updatedAt: new Date().toISOString(),
+                            date: date
+                        }, { merge: true });
+                        migratedCount++;
+                    } catch(e) {}
+                }
+            }
+            // Tandai sudah migrasi
+            await setDoc(userDocRef, { migrated: true, email: currentUser.email, displayName: currentUser.displayName, createdAt: new Date().toISOString() }, { merge: true });
+            console.log(`Migrated ${migratedCount} days from localStorage`);
+            return true;
+        }
+
+        // Login dengan Google
+        async function loginWithGoogle() {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                // onAuthStateChanged akan menangani sisanya
+            } catch (error) {
+                console.error(error);
+                showStatusModal("Gagal", error.message, "error");
+            }
+        }
+
+        function logout() {
+            signOut(auth);
+        }
+
+        // Show laporan mingguan dengan grafik
+        function showReport() {
+            const modal = document.getElementById('report-modal');
+            const avgScore = Math.round(weeklyScores.reduce((a,b)=>a+b,0)/7);
+            document.getElementById('modal-score').innerText = avgScore + '%';
+            document.getElementById('modal-msg').innerText = streakValue >= 5 ? "MasyaAllah, konsisten!" : "Tetap semangat!";
+            modal.classList.remove('hidden');
+            // Render chart jika canvas sudah ada
+            const ctx = document.getElementById('weekly-chart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['H-6','H-5','H-4','H-3','H-2','Kemarin','Hari Ini'],
+                    datasets: [{ label: 'Konsistensi (%)', data: weeklyScores, backgroundColor: '#0f766e', borderRadius: 8 }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, scales: { y: { max: 100, min: 0 } } }
+            });
+        }
+
+        function shareToWhatsApp() {
+            const percent = progressText.innerText;
+            window.open(`https://wa.me/?text=📊 *Habit Tracker*%0A✨ Skor hari ini: ${percent}%0A🔥 Streak: ${streakValue} hari%0A_Istiqomah!_`, '_blank');
+        }
+
+        // Modal helpers
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function showStatusModal(title, msg, type) {
+            const bg = document.getElementById('status-icon-bg'); const ic = document.getElementById('status-icon');
+            document.getElementById('status-title').innerText = title; document.getElementById('status-msg').innerText = msg;
+            if(type === 'success') { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100 text-green-600"; ic.className = "fas fa-check text-2xl"; }
+            else { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-red-100 text-red-600"; ic.className = "fas fa-exclamation text-2xl"; }
+            document.getElementById('status-modal').classList.remove('hidden');
+        }
+
+        // Toggle sections
         function toggleSection(id) {
             ['section-ibadah', 'section-kesehatan'].forEach(sec => {
                 const el = document.getElementById(sec); const c = document.getElementById('chevron-'+sec);
@@ -309,56 +369,181 @@
             });
         }
 
-        function backupData() {
-            const blob = new Blob([JSON.stringify(localStorage)], { type: "application/json" });
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-            a.download = `habit_tracker_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            showStatusModal("Berhasil", "Data berhasil diamankan.", "success"); closeModal('data-modal');
-        }
-        function restoreData(input) {
-            const f = input.files[0]; if(!f) return;
-            const r = new FileReader(); r.onload = function(e) { try { const d = JSON.parse(e.target.result); Object.keys(d).forEach(k => localStorage.setItem(k, d[k])); showStatusModal("Sukses", "Data dipulihkan!", "success"); renderApp(); closeModal('data-modal'); } catch(err) { showStatusModal("Gagal", "File rusak.", "error"); } }; r.readAsText(f);
-        }
-        function resetData() { if(confirm("Hapus semua data?")) { localStorage.clear(); renderApp(); showStatusModal("Reset", "Bersih!", "success"); closeModal('data-modal'); } }
+        // Event listeners & Auth state
+        window.onload = () => {
+            document.getElementById('login-google-btn').onclick = loginWithGoogle;
+            logoutBtn.onclick = logout;
+            saveJournalBtn.onclick = saveJournal;
+            window.showReport = showReport;
+            window.shareToWhatsApp = shareToWhatsApp;
+            window.openModal = openModal;
+            window.closeModal = closeModal;
+            window.toggleSection = toggleSection;
+            window.checkNotificationStatus = () => {}; // placeholder
+            window.backupData = () => showStatusModal("Info", "Backup otomatis via cloud", "success");
+            window.resetData = () => {};
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    loginScreen.classList.add('hidden');
+                    appScreen.classList.remove('hidden');
+                    userAvatar.src = user.photoURL || 'https://ui-avatars.com/api/?background=0f766e&color=fff&name='+encodeURIComponent(user.displayName||'User');
+                    userNameSpan.innerText = user.displayName || user.email;
+                    // Migrasi data lama dari localStorage (sekali)
+                    await migrateLocalStorageToFirestore(user.uid);
+                    // Subscribe ke hari ini
+                    subscribeToToday(user.uid);
+                } else {
+                    currentUser = null;
+                    if (unsubscribeDaily) unsubscribeDaily();
+                    loginScreen.classList.remove('hidden');
+                    appScreen.classList.add('hidden');
+                }
+            });
+        };
 
-        function getWeeklyStats() { let t=0, c=0; for(let i=0; i<7; i++) { const d=new Date(); d.setDate(d.getDate()-i); const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_score`; const s=localStorage.getItem(k); if(s!==null){ t+=parseInt(s); c++; } } return c>0?Math.round(t/c):0; }
-        function showReport() { document.getElementById('modal-score').innerText = getWeeklyStats()+'%'; document.getElementById('modal-msg').innerText = getWeeklyStats()>85?"MasyaAllah!":"Ayo Semangat!"; document.getElementById('report-modal').classList.remove('hidden'); }
-        function shareToWhatsApp() { window.open(`https://wa.me/?text=📊 *Habit Report*%0A%0A✨ Skor: ${document.getElementById('progress-text').innerText}%0A📅 Minggu Ini: ${getWeeklyStats()}%%0A%0A_Istiqomah!_`, '_blank'); }
+        // Expose functions ke global untuk HTML onclick
+        window.toggleHabit = window.toggleHabit;
+    </script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; user-select: none; -webkit-tap-highlight-color: transparent; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-bg { animation: fadeIn 0.3s ease-out; }
+        .modal-box { animation: slideUp 0.3s ease-out; }
+        .accordion-content { transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 2500px; opacity: 1; }
+        .chevron { transition: transform 0.3s; }
+        .chevron.rotate { transform: rotate(180deg); }
+        .prayer-circle { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        .prayer-circle:active { transform: scale(0.9); }
+        .wajib.active { background-color: #0f766e; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.4); }
+        .sunnah-circle.active { background-color: #d97706; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4); }
+        .inactive { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
+        .click-area { cursor: pointer; touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-32 relative">
 
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function showStatusModal(t, m, type) {
-            const bg = document.getElementById('status-icon-bg'); const ic = document.getElementById('status-icon');
-            document.getElementById('status-title').innerText = t; document.getElementById('status-msg').innerText = m;
-            if(type === 'success') { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100 text-green-600"; ic.className = "fas fa-check text-2xl"; }
-            else { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-red-100 text-red-600"; ic.className = "fas fa-exclamation text-2xl"; }
-            document.getElementById('status-modal').classList.remove('hidden');
-        }
+    <!-- LAYAR LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-teal-700" style="background: linear-gradient(135deg, #0f766e, #115e59);">
+        <div class="text-center px-6 max-w-sm">
+            <i class="fas fa-mosque text-7xl text-white opacity-80 mb-6"></i>
+            <h1 class="text-3xl font-bold text-white mb-2">Muslim Tracker</h1>
+            <p class="text-teal-100 mb-8">Pantau ibadah & kesehatanmu</p>
+            <button id="login-google-btn" class="bg-white text-slate-700 font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 w-full max-w-xs mx-auto active:scale-95 transition">
+                <i class="fab fa-google text-red-500 text-xl"></i> Masuk dengan Google
+            </button>
+            <p class="text-xs text-teal-200 mt-8">Data tersimpan aman di cloud & bisa offline</p>
+        </div>
+    </div>
 
-        function confirmNotification() { closeModal('notif-modal'); alarmSound.play().then(() => { alarmSound.pause(); alarmSound.currentTime = 0; localStorage.setItem("notif_enabled", "true"); showStatusModal("Aktif", "Pengingat suara nyala.", "success"); }).catch(() => { localStorage.setItem("notif_enabled", "true"); showStatusModal("Info", "Pastikan volume HP nyala.", "success"); }); }
-        function checkNotificationStatus(f) { const e = localStorage.getItem("notif_enabled"); if(e==="true") { if(f) showStatusModal("Aktif", "Pengingat sudah aktif.", "success"); } else { document.getElementById('notif-modal').classList.remove('hidden'); } }
+    <!-- LAYAR UTAMA (AWALNYA HIDDEN) -->
+    <div id="app-screen" class="hidden">
+        <div class="bg-teal-700 text-white p-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden mb-6">
+            <div class="relative z-10">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">Muslim Tracker</h1>
+                        <p class="text-teal-200 text-xs mt-1 opacity-90" id="current-date">...</p>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <img id="user-avatar" class="w-10 h-10 rounded-full border-2 border-white" src="" alt="avatar">
+                        <button id="logout-btn" class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center border border-teal-500"><i class="fas fa-sign-out-alt text-teal-100 text-xs"></i></button>
+                    </div>
+                </div>
+                <div class="mt-3 flex justify-between items-center">
+                    <span id="user-name" class="text-sm font-medium"></span>
+                    <span id="streak-badge" class="text-xs bg-teal-800 px-2 py-1 rounded-full"><i class="fas fa-fire"></i> Streak 0 hari</span>
+                </div>
+            </div>
+            <i class="fas fa-leaf absolute -right-8 -bottom-8 text-9xl text-teal-800 opacity-20 transform rotate-12"></i>
+        </div>
 
-        setInterval(() => {
-            if(localStorage.getItem("notif_enabled") !== "true") return;
-            const now = new Date(); const h = now.getHours(); const m = now.getMinutes();
-            const key = getTodayKey() + `_notif_${h}`; if(localStorage.getItem(key)) return;
-            let msg = ""; let title = "";
-            if(h === 4 && m === 30) { title="Subuh"; msg = "Waktunya Shalat Subuh!"; }
-            if(h === 12 && m === 0) { title="Dzuhur"; msg = "Waktunya Shalat Dzuhur"; }
-            if(h === 15 && m === 15) { title="Ashar"; msg = "Waktunya Shalat Ashar"; }
-            if(h === 18 && m === 0) { title="Maghrib"; msg = "Waktunya Shalat Maghrib"; }
-            if(h === 19 && m === 15) { title="Isya"; msg = "Waktunya Shalat Isya"; }
-            if(h === 21 && m === 30) { title="Istirahat"; msg = "Waktunya Tidur & Witir"; }
-            if(msg) { alarmSound.play().catch(()=>{}); showStatusModal(title, msg, "success"); localStorage.setItem(key, "sent"); }
-        }, 60000);
+        <div class="max-w-md mx-auto px-4 relative z-20">
+            <!-- Progress Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm mb-5 border border-slate-100">
+                <div class="flex justify-between items-end mb-3">
+                    <div>
+                        <span class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Produktivitas Hari Ini</span>
+                        <div class="text-4xl font-extrabold text-slate-800 mt-1" id="progress-text">0%</div>
+                    </div>
+                    <div id="progress-icon-container" class="h-10 w-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600"><i class="fas fa-chart-pie text-lg"></i></div>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2"><div id="progress-bar" class="bg-teal-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div></div>
+            </div>
 
-        // Service Worker Reg
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./service-worker.js'); }); }
+            <!-- Jurnal Harian -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm mb-5 border border-slate-100">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider"><i class="fas fa-pen-alt mr-1"></i> Jurnal Harian</span>
+                    <button id="save-journal" class="text-teal-600 text-xs font-semibold bg-teal-50 px-3 py-1 rounded-full">Simpan</button>
+                </div>
+                <textarea id="journal-textarea" rows="2" class="w-full border border-slate-200 rounded-xl p-2 text-sm text-slate-600 focus:outline-none focus:border-teal-300" placeholder="Tulis catatan harianmu..."></textarea>
+            </div>
 
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        renderApp(); toggleSection('section-ibadah'); setTimeout(() => checkNotificationStatus(false), 2000);
+            <!-- Tombol aksi -->
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <button onclick="window.showReport()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fas fa-calendar-alt text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Laporan</span></button>
+                <button onclick="window.shareToWhatsApp()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><i class="fas fa-share-nodes text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Bagikan</span></button>
+                <button onclick="window.openModal('data-modal')" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center"><i class="fas fa-database text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Data</span></button>
+            </div>
+
+            <!-- Ibadah Section -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+                <button onclick="window.toggleSection('section-ibadah')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
+                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600"><i class="fas fa-mosque"></i></div><div><h3 class="font-bold text-slate-800">Ibadah & Sunnah</h3><span id="count-ibadah" class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span></div></div>
+                    <i id="chevron-section-ibadah" class="fas fa-chevron-down text-slate-300 chevron"></i>
+                </button>
+                <div id="section-ibadah" class="accordion-content bg-slate-50"><div class="p-5 space-y-6">
+                    <div class="bg-white p-4 rounded-xl"><div class="flex justify-between mb-4"><span class="text-xs font-bold text-slate-500">Wajib Berjamaah</span></div><div id="prayer-wajib-container" class="flex justify-between"></div></div>
+                    <div class="bg-white p-4 rounded-xl relative overflow-hidden"><div class="flex justify-between mb-4"><span class="text-xs font-bold text-slate-500">Sunnah Utama</span></div><div id="prayer-sunnah-container" class="flex justify-between"></div></div>
+                    <h4 class="text-[10px] font-bold text-slate-400">Ibadah Tambahan</h4><div id="list-ibadah-extra" class="space-y-2"></div>
+                </div></div>
+            </div>
+
+            <!-- Kesehatan Section -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+                <button onclick="window.toggleSection('section-kesehatan')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
+                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><i class="fas fa-heart-pulse"></i></div><div><h3 class="font-bold text-slate-800">Kesehatan (Medis)</h3><span id="count-kesehatan" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span></div></div>
+                    <i id="chevron-section-kesehatan" class="fas fa-chevron-down text-slate-300 chevron"></i>
+                </button>
+                <div id="section-kesehatan" class="accordion-content bg-slate-50"><div class="p-5 space-y-2" id="list-kesehatan"></div><div class="px-5 pb-5"><p class="text-[10px] text-slate-400 italic">*Sumber: AHA, Harvard Health</p></div></div>
+            </div>
+
+            <div class="text-center py-6 border-t border-slate-200"><p class="text-[10px] text-slate-400">Designed for Istiqomah</p></div>
+        </div>
+    </div>
+
+    <!-- MODAL REPORT dengan CHART -->
+    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.6);">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full relative modal-box overflow-hidden">
+            <button onclick="window.closeModal('report-modal')" class="absolute top-4 right-4 text-slate-400"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-xl font-bold text-slate-800 mb-1 text-center">Laporan Mingguan</h3>
+            <p class="text-xs text-slate-500 text-center mb-4">Konsistensi 7 Hari Terakhir</p>
+            <canvas id="weekly-chart" width="300" height="200" style="max-height: 200px; width:100%"></canvas>
+            <div class="flex justify-center items-center mt-4"><div class="w-20 h-20 rounded-full border-4 border-teal-100 flex items-center justify-center"><span id="modal-score" class="text-2xl font-bold text-teal-600">0%</span></div></div>
+            <p id="modal-msg" class="text-center text-sm font-medium text-slate-700 mb-6 bg-slate-50 p-3 rounded-lg">...</p>
+            <button onclick="window.shareToWhatsApp()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> Bagikan Laporan</button>
+        </div>
+    </div>
+
+    <!-- MODAL DATA (backup/restore sederhana) -->
+    <div id="data-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
+        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full relative modal-box"><button onclick="window.closeModal('data-modal')" class="absolute top-3 right-4 text-slate-300"><i class="fas fa-times"></i></button><h3 class="text-lg font-bold text-slate-800 mb-1 text-center">Data & Backup</h3><p class="text-xs text-slate-500 text-center mb-6">Data otomatis tersimpan di cloud.</p><button onclick="window.backupData()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-3"><i class="fas fa-download text-teal-600"></i><span>Backup Manual (JSON)</span></button><button onclick="window.resetData()" class="w-full border border-red-200 text-red-500 hover:bg-red-50 py-3 rounded-xl mt-4"><i class="fas fa-trash-alt"></i> Reset Lokal</button></div>
+    </div>
+
+    <!-- MODAL STATUS -->
+    <div id="status-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);"><div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center modal-box"><div id="status-icon-bg" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i id="status-icon" class="fas fa-check text-2xl"></i></div><h3 id="status-title" class="text-lg font-bold text-slate-800 mb-2">Judul</h3><p id="status-msg" class="text-sm text-slate-600 mb-6">Pesan</p><button onclick="window.closeModal('status-modal')" class="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl">Oke</button></div></div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./service-worker.js').catch(err => console.log(err)); }); }
+        window.backupData = function() { alert("Data sudah tersimpan di cloud secara otomatis. Backup manual tidak diperlukan."); };
+        window.resetData = function() { if(confirm("Hapus semua data lokal? (Data cloud tetap aman)")) localStorage.clear(); };
     </script>
 </body>
-
 </html>
