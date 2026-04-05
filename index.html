@@ -70,9 +70,11 @@
         ];
         const allHabits = [...prayerWajib, ...prayerSunnah, ...ibadahExtra, ...healthHabits, ...akhlakHabits];
 
-        function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        function formatDate(date) { const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        function getTodayKey() { return formatDate(new Date()); }
 
         let currentUser = null;
+        let currentViewDate = getTodayKey();      // tanggal yang sedang dilihat
         let currentDailyData = {};
         let currentJournal = "";
         let unsubscribeDaily = null;
@@ -100,6 +102,10 @@
         const countKesehatanSpan = document.getElementById('count-kesehatan');
         const countAkhlakSpan = document.getElementById('count-akhlak');
         const currentDateSpan = document.getElementById('current-date');
+        const viewDateInput = document.getElementById('view-date');
+        const viewDatePercent = document.getElementById('view-date-percent');
+        const todayBtn = document.getElementById('today-btn');
+        const viewDateContainer = document.getElementById('view-date-container');
 
         function computePercent(data) {
             let total = 0, done = 0;
@@ -173,12 +179,23 @@
             const percent = computePercent(data);
             progressText.innerText = percent + '%';
             progressBar.style.width = percent + '%';
+            // Update persentase di samping date picker
+            viewDatePercent.innerText = `${percent}%`;
             const iconCont = document.getElementById('progress-icon-container');
             if(percent === 100) iconCont.className = "h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600";
             else if(percent > 50) iconCont.className = "h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600";
             else iconCont.className = "h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400";
             
             journalTextarea.value = currentJournal || "";
+            
+            // Ubah warna border jika sedang melihat hari lain
+            if (currentViewDate === getTodayKey()) {
+                viewDateContainer.classList.remove('border-2', 'border-amber-400', 'bg-amber-50');
+                viewDateContainer.classList.add('border', 'border-slate-200');
+            } else {
+                viewDateContainer.classList.add('border-2', 'border-amber-400', 'bg-amber-50');
+                viewDateContainer.classList.remove('border', 'border-slate-200');
+            }
         }
 
         async function saveDailyToFirestore(uid, date, newData, newJournal) {
@@ -190,12 +207,14 @@
 
         window.toggleHabit = async (habitId) => {
             if (!currentUser) return;
-            const today = getTodayKey();
             const newData = { ...currentDailyData };
             newData[habitId] = !newData[habitId];
             currentDailyData = newData;
             renderUI();
-            await saveDailyToFirestore(currentUser.uid, today, newData, currentJournal);
+            await saveDailyToFirestore(currentUser.uid, currentViewDate, newData, currentJournal);
+            // Update streak dan weekly jika tanggal yang diubah adalah hari ini atau berpengaruh pada streak?
+            // Streak & weekly selalu berdasarkan hari ini, jadi perlu refresh jika mengubah hari ini atau hari lain yang mempengaruhi 7 hari terakhir.
+            // Untuk sederhana, refresh streak & weekly setiap kali ada perubahan.
             await updateStreakAndWeekly();
         };
 
@@ -203,8 +222,7 @@
             if (!currentUser) return;
             const newJournal = journalTextarea.value;
             currentJournal = newJournal;
-            const today = getTodayKey();
-            await saveDailyToFirestore(currentUser.uid, today, currentDailyData, newJournal);
+            await saveDailyToFirestore(currentUser.uid, currentViewDate, currentDailyData, newJournal);
             showStatusModal("Jurnal", "Catatan tersimpan", "success");
         }
 
@@ -216,7 +234,7 @@
             for (let i = 6; i >= 0; i--) {
                 let d = new Date(today);
                 d.setDate(today.getDate() - i);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const dateStr = formatDate(d);
                 last7Days.push(dateStr);
             }
             const promises = last7Days.map(date => getDoc(doc(db, 'users', uid, 'daily', date)));
@@ -242,10 +260,9 @@
             }
         }
 
-        function subscribeToToday(uid) {
+        function subscribeToDate(uid, date) {
             if (unsubscribeDaily) unsubscribeDaily();
-            const today = getTodayKey();
-            const docRef = doc(db, 'users', uid, 'daily', today);
+            const docRef = doc(db, 'users', uid, 'daily', date);
             unsubscribeDaily = onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
@@ -256,7 +273,6 @@
                     currentJournal = "";
                 }
                 renderUI();
-                updateStreakAndWeekly();
             });
         }
 
@@ -388,6 +404,34 @@
             });
         }
 
+        // Date picker handlers
+        function initDatePicker() {
+            const todayStr = getTodayKey();
+            viewDateInput.value = todayStr;
+            viewDateInput.max = todayStr; // tidak boleh pilih tanggal > hari ini
+            viewDateInput.addEventListener('change', async (e) => {
+                const newDate = e.target.value;
+                if (newDate > todayStr) {
+                    viewDateInput.value = currentViewDate;
+                    showStatusModal("Info", "Tidak bisa memilih tanggal di masa depan", "error");
+                    return;
+                }
+                currentViewDate = newDate;
+                if (currentUser) {
+                    subscribeToDate(currentUser.uid, currentViewDate);
+                }
+                renderUI();
+            });
+            todayBtn.addEventListener('click', () => {
+                viewDateInput.value = todayStr;
+                currentViewDate = todayStr;
+                if (currentUser) {
+                    subscribeToDate(currentUser.uid, currentViewDate);
+                }
+                renderUI();
+            });
+        }
+
         window.onload = () => {
             document.getElementById('login-email-btn').onclick = showEmailLoginModal;
             document.getElementById('close-email-modal').onclick = closeEmailModal;
@@ -404,6 +448,7 @@
             window.backupData = () => showStatusModal("Info", "Data otomatis tersimpan di cloud", "success");
             window.resetData = () => { if(confirm("Hapus semua data lokal? Data cloud tetap aman")) localStorage.clear(); };
             currentDateSpan.innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            initDatePicker();
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
@@ -413,7 +458,11 @@
                     userAvatar.src = 'https://ui-avatars.com/api/?background=0f766e&color=fff&name='+encodeURIComponent(user.displayName || user.email || 'User');
                     userNameSpan.innerText = user.displayName || user.email;
                     await migrateLocalStorageToFirestore(user.uid);
-                    subscribeToToday(user.uid);
+                    // Set view date ke hari ini
+                    currentViewDate = getTodayKey();
+                    viewDateInput.value = currentViewDate;
+                    subscribeToDate(user.uid, currentViewDate);
+                    await updateStreakAndWeekly();
                 } else {
                     currentUser = null;
                     if (unsubscribeDaily) unsubscribeDaily();
@@ -489,7 +538,7 @@
         </div>
     </div>
 
-    <!-- LAYAR UTAMA (sama seperti sebelumnya) -->
+    <!-- LAYAR UTAMA -->
     <div id="app-screen" class="hidden">
         <div class="bg-teal-700 text-white p-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden mb-6">
             <div class="relative z-10">
@@ -522,6 +571,16 @@
                     <div id="progress-icon-container" class="h-10 w-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600"><i class="fas fa-chart-pie text-lg"></i></div>
                 </div>
                 <div class="w-full bg-slate-100 rounded-full h-2"><div id="progress-bar" class="bg-teal-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div></div>
+            </div>
+
+            <!-- Date Picker + Persentase + Tombol Hari Ini -->
+            <div id="view-date-container" class="bg-white rounded-2xl p-3 shadow-sm mb-5 border border-slate-200 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-1">
+                    <i class="fas fa-calendar-alt text-teal-600"></i>
+                    <input type="date" id="view-date" class="text-sm border-none focus:ring-0 bg-transparent text-slate-700 font-medium">
+                    <span class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded-full" id="view-date-percent">0%</span>
+                </div>
+                <button id="today-btn" class="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-semibold hover:bg-teal-200 transition">Hari Ini</button>
             </div>
 
             <!-- Jurnal Harian -->
