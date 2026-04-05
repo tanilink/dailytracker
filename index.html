@@ -20,8 +20,8 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot, writeBatch, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ======================== KONFIGURASI FIREBASE ========================
         const firebaseConfig = {
@@ -37,7 +37,6 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const googleProvider = new GoogleAuthProvider();
         const db = getFirestore(app);
 
         enableIndexedDbPersistence(db).catch(console.warn);
@@ -278,7 +277,7 @@
                     } catch(e) {}
                 }
             }
-            await setDoc(userDocRef, { migrated: true, email: currentUser.email, displayName: currentUser.displayName, createdAt: new Date().toISOString() }, { merge: true });
+            await setDoc(userDocRef, { migrated: true, email: currentUser.email, displayName: currentUser.displayName || currentUser.email.split('@')[0], createdAt: new Date().toISOString() }, { merge: true });
             return true;
         }
 
@@ -298,7 +297,6 @@
             }
             try {
                 const userCred = await createUserWithEmailAndPassword(auth, email, password);
-                // Buat user doc di Firestore
                 await setDoc(doc(db, 'users', userCred.user.uid), {
                     email: email,
                     displayName: email.split('@')[0],
@@ -307,7 +305,6 @@
                 });
                 showStatusModal("Berhasil", "Akun terdaftar! Silakan login.", "success");
                 closeEmailModal();
-                // Reset form
                 document.getElementById('reg-email').value = '';
                 document.getElementById('reg-password').value = '';
             } catch (error) {
@@ -324,7 +321,6 @@
             try {
                 await signInWithEmailAndPassword(auth, email, password);
                 closeEmailModal();
-                // Reset form
                 document.getElementById('login-email').value = '';
                 document.getElementById('login-password').value = '';
             } catch (error) {
@@ -341,15 +337,7 @@
                 showStatusModal("Gagal", error.message, "error");
             }
         }
-        // ======================== GOOGLE LOGIN ========================
-        async function loginWithGoogle() {
-            try {
-                await signInWithPopup(auth, googleProvider);
-            } catch (error) {
-                console.error(error);
-                showStatusModal("Gagal", error.message, "error");
-            }
-        }
+        
         function logout() { signOut(auth); }
 
         function showReport() {
@@ -401,7 +389,6 @@
         }
 
         window.onload = () => {
-            document.getElementById('login-google-btn').onclick = loginWithGoogle;
             document.getElementById('login-email-btn').onclick = showEmailLoginModal;
             document.getElementById('close-email-modal').onclick = closeEmailModal;
             document.getElementById('register-btn').onclick = handleRegister;
@@ -423,7 +410,7 @@
                     currentUser = user;
                     loginScreen.classList.add('hidden');
                     appScreen.classList.remove('hidden');
-                    userAvatar.src = user.photoURL || 'https://ui-avatars.com/api/?background=0f766e&color=fff&name='+encodeURIComponent(user.displayName||user.email||'User');
+                    userAvatar.src = 'https://ui-avatars.com/api/?background=0f766e&color=fff&name='+encodeURIComponent(user.displayName || user.email || 'User');
                     userNameSpan.innerText = user.displayName || user.email;
                     await migrateLocalStorageToFirestore(user.uid);
                     subscribeToToday(user.uid);
@@ -463,10 +450,6 @@
             <i class="fas fa-mosque text-7xl text-white opacity-80 mb-6"></i>
             <h1 class="text-3xl font-bold text-white mb-2">Muslim Tracker</h1>
             <p class="text-teal-100 mb-8">Pantau ibadah, kesehatan & akhlak</p>
-            
-            <button id="login-google-btn" class="bg-white text-slate-700 font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 w-full active:scale-95 transition mb-4">
-                <i class="fab fa-google text-red-500 text-xl"></i> Masuk dengan Google
-            </button>
             
             <button id="login-email-btn" class="bg-teal-600 border border-teal-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 w-full active:scale-95 transition">
                 <i class="fas fa-envelope text-white text-xl"></i> Masuk dengan Email
