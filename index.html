@@ -1,664 +1,1629 @@
+
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f766e">
-    <meta name="description" content="Aplikasi Pemantau Ibadah, Kesehatan & Akhlak">
-    <title>Muslim Habit Tracker Pro</title>
-    
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png">
+    <meta name="description" content="Aplikasi Pemantau Ibadah, Kesehatan & Akhlak - Moeslem Daily Tracker Pro">
+    <title>Moeslem Daily Tracker Pro</title>
 
-    <!-- Tailwind + Font Awesome -->
+    <!-- Tailwind CDN + Custom Config -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'Segoe UI', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px rgba(0,0,0,0.05)',
+                        'glow': '0 0 20px rgba(13,148,136,0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- Google Fonts Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
-    <!-- Firebase SDKs -->
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Poppins', 'Segoe UI', Tahoma, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Scrollbar Halus */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+        /* Animasi */
+        @keyframes pulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-box {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Accordion */
+        .accordion-content {
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 3500px;
+            opacity: 1;
+        }
+        .chevron {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .chevron.rotate {
+            transform: rotate(180deg);
+        }
+
+        /* Prayer Circle */
+        .prayer-circle {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            position: relative;
+        }
+        .prayer-circle:active {
+            transform: scale(0.9);
+        }
+        .wajib.active {
+            background: linear-gradient(135deg, #0d9488, #0f766e);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+            animation: pulseRing 1.8s ease-out 1;
+        }
+        .wajib.inactive {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            border: 2px solid #e2e8f0;
+        }
+        .dark .wajib.inactive {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #64748b;
+        }
+        .sunnah-circle.active {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+            animation: pulseRing 1.8s ease-out 1;
+        }
+        .sunnah-circle.inactive {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            border: 2px solid #e2e8f0;
+        }
+        .dark .sunnah-circle.inactive {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #64748b;
+        }
+
+        .click-area {
+            touch-action: manipulation;
+        }
+        .click-area:active {
+            transform: scale(0.985);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen pb-20 transition-colors duration-300">
+
+    <!-- TOAST NOTIFIKASI -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 items-center w-full max-w-sm px-4 pointer-events-none"></div>
+
+    <!-- ==================== LAYAR LOGIN ==================== -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center px-6 transition-all"
+         style="background: linear-gradient(135deg, #0f766e 0%, #134e4a 60%, #0c4a45 100%);">
+        <div class="text-center max-w-sm w-full">
+            <div class="mb-6">
+                <div class="w-24 h-24 mx-auto bg-white/10 rounded-3xl flex items-center justify-center backdrop-blur-md border border-white/20 shadow-2xl">
+                    <i class="fas fa-mosque text-5xl text-white"></i>
+                </div>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Moeslem Daily Tracker</h1>
+            <p class="text-teal-100/80 mb-8 text-sm font-light">Pantau konsistensi ibadah, kesehatan & adab harian</p>
+
+            <div class="space-y-3">
+                <button id="login-email-btn" class="bg-white text-teal-800 font-semibold py-3.5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-3 w-full active:scale-[0.97] transition duration-200 hover:bg-teal-50">
+                    <i class="fas fa-envelope text-teal-700 text-lg"></i> Masuk / Daftar dengan Email
+                </button>
+
+                <button id="login-guest-btn" class="bg-white/15 backdrop-blur-md border border-white/25 text-white font-medium py-3 px-6 rounded-2xl shadow flex items-center justify-center gap-2 w-full active:scale-[0.97] transition duration-200 hover:bg-white/20">
+                    <i class="fas fa-user-clock text-teal-200"></i> Lanjut Mode Offline (Tamu)
+                </button>
+            </div>
+
+            <div class="mt-8 flex items-center justify-center gap-4">
+                <button onclick="window.toggleDarkMode()" class="text-teal-100/70 hover:text-white text-xs font-medium flex items-center gap-2 transition">
+                    <i id="login-dark-icon" class="fas fa-moon"></i>
+                    <span>Mode Tampilan</span>
+                </button>
+            </div>
+            <p class="text-[11px] text-teal-200/60 mt-8 font-light">🔒 Data aman • Mendukung sinkronisasi cloud & offline</p>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL LOGIN EMAIL ==================== -->
+    <div id="email-login-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full relative modal-box max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-700">
+            <button id="close-email-modal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4 text-center">Masuk ke Akun</h3>
+
+            <div class="mb-3">
+                <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Email</label>
+                <input id="login-email" type="email" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-teal-500 transition" placeholder="nama@email.com">
+            </div>
+            <div class="mb-4">
+                <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Password</label>
+                <input id="login-password" type="password" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-teal-500 transition" placeholder="••••••••">
+            </div>
+
+            <button id="login-submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-600/30 mb-2 transition active:scale-[0.97]">
+                Masuk
+            </button>
+            <button id="reset-password-btn" class="w-full text-teal-600 dark:text-teal-400 text-xs py-1.5 hover:underline transition">
+                Lupa kata sandi?
+            </button>
+
+            <div class="relative my-5">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-slate-800 px-3 text-slate-400 font-semibold">Atau</span></div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="mb-2">
+                    <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Daftar Baru</label>
+                    <input id="reg-email" type="email" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl p-2.5 text-sm focus:outline-none focus:border-teal-500 transition mb-2" placeholder="email-baru@domain.com">
+                    <input id="reg-password" type="password" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl p-2.5 text-sm focus:outline-none focus:border-teal-500 transition" placeholder="Password (min 6 karakter)">
+                </div>
+                <button id="register-btn" class="w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 py-2.5 rounded-xl font-semibold text-sm transition active:scale-[0.97]">
+                    Daftar Akun Baru
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== LAYAR UTAMA ==================== -->
+    <div id="app-screen" class="hidden">
+        <!-- Header Atas -->
+        <div class="relative overflow-hidden mb-6" style="background: linear-gradient(135deg, #0f766e 0%, #115e59 50%, #0d4f4b 100%);">
+            <div class="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-teal-400/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl pointer-events-none"></div>
+            
+            <div class="text-white p-5 pt-7 relative z-10 max-w-md mx-auto">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-xl font-bold tracking-tight">Moeslem Tracker</h1>
+                            <span id="user-mode-tag" class="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">Cloud</span>
+                        </div>
+                        <p class="text-teal-200/90 text-xs mt-0.5" id="current-date">Memuat...</p>
+                    </div>
+
+                    <div class="flex gap-2 items-center">
+                        <button onclick="window.toggleDarkMode()" class="w-9 h-9 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 hover:bg-white/20 transition" title="Ganti Tema">
+                            <i id="dark-toggle-icon" class="fas fa-moon text-slate-200 text-sm"></i>
+                        </button>
+                        <button onclick="window.openProfileModal()" class="cursor-pointer" title="Profil">
+                            <img id="user-avatar" class="w-9 h-9 rounded-full border-2 border-white/80 shadow object-cover hover:scale-105 transition" src="" alt="Avatar">
+                        </button>
+                        <button onclick="window.openModal('data-modal')" class="w-9 h-9 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 hover:bg-white/20 transition" title="Pengaturan & Backup">
+                            <i class="fas fa-gear text-teal-100 text-sm"></i>
+                        </button>
+                        <button onclick="window.logout()" class="w-9 h-9 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 hover:bg-red-500/40 transition" title="Keluar">
+                            <i class="fas fa-arrow-right-from-bracket text-teal-100 text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-between items-center bg-black/15 px-3.5 py-2 rounded-xl backdrop-blur-sm border border-white/10">
+                    <span id="user-name" class="text-xs font-medium text-teal-50 truncate max-w-[170px]">Pengguna</span>
+                    <span id="streak-badge" class="text-xs bg-amber-500/20 text-amber-200 px-3 py-1 rounded-full font-semibold border border-amber-400/30 flex items-center gap-1.5">
+                        <i class="fas fa-fire text-amber-400"></i>
+                        <span id="streak-text">Streak 0 hari</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-md mx-auto px-4 relative z-20">
+            <!-- Progress Keseluruhan Card -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft dark:shadow-md mb-4 border border-slate-100 dark:border-slate-700/80 transition-colors">
+                <div class="flex justify-between items-end mb-3">
+                    <div>
+                        <span class="text-slate-400 dark:text-slate-400 text-[10px] uppercase tracking-widest font-bold">Pencapaian Hari Ini</span>
+                        <div class="text-3xl font-extrabold text-slate-800 dark:text-slate-100 mt-0.5" id="progress-text">0%</div>
+                    </div>
+                    <div id="progress-icon-container" class="h-11 w-11 bg-teal-50 dark:bg-teal-900/40 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400 transition-all">
+                        <i class="fas fa-chart-pie text-lg"></i>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                    <div id="progress-bar" class="h-full rounded-full transition-all duration-500 ease-out" style="width: 0%; background: linear-gradient(90deg, #0d9488, #14b8a6);"></div>
+                </div>
+            </div>
+
+            <!-- Pemilih Tanggal -->
+            <div id="view-date-container" class="bg-white dark:bg-slate-800 rounded-2xl p-3.5 shadow-soft dark:shadow-md mb-4 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 transition-all">
+                <div class="flex items-center gap-2.5 flex-1">
+                    <i class="fas fa-calendar-day text-teal-600 dark:text-teal-400 text-base"></i>
+                    <input type="date" id="view-date" class="text-sm font-semibold bg-transparent text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none">
+                    <span class="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/40 px-2.5 py-0.5 rounded-full" id="view-date-percent">0%</span>
+                </div>
+                <button id="today-btn" class="text-xs bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 px-3.5 py-1.5 rounded-xl font-semibold hover:bg-teal-200 dark:hover:bg-teal-800 transition active:scale-95">
+                    Hari Ini
+                </button>
+            </div>
+
+            <!-- Menu Aksi Cepat -->
+            <div class="grid grid-cols-3 gap-2.5 mb-5">
+                <button onclick="window.showReport()" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 flex flex-col items-center gap-1.5 active:scale-95 transition hover:border-indigo-200">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <i class="fas fa-chart-column text-xs"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Grafik</span>
+                </button>
+                <button onclick="window.shareToWhatsApp()" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 flex flex-col items-center gap-1.5 active:scale-95 transition hover:border-emerald-200">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <i class="fab fa-whatsapp text-sm"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Bagikan</span>
+                </button>
+                <button onclick="window.showMonthlyReport()" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 flex flex-col items-center gap-1.5 active:scale-95 transition hover:border-amber-200">
+                    <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                        <i class="fas fa-calendar-check text-xs"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Bulanan</span>
+                </button>
+            </div>
+
+            <!-- Bagian 1: Ibadah & Sunnah (Buka default) -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden mb-3.5 transition-colors">
+                <button onclick="window.toggleSection('section-ibadah')" class="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                            <i class="fas fa-mosque"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Ibadah & Sunnah</h3>
+                            <span id="count-ibadah" class="text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/40 px-2 py-0.5 rounded-md mt-0.5 inline-block">0/0</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden hidden sm:block">
+                            <div id="progress-ibadah" class="h-full bg-teal-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <i id="chevron-section-ibadah" class="fas fa-chevron-down text-slate-400 text-xs chevron rotate"></i>
+                    </div>
+                </button>
+                <div id="section-ibadah" class="accordion-content open bg-slate-50/70 dark:bg-slate-900/40">
+                    <div class="p-4 space-y-4">
+                        <!-- Shalat Wajib -->
+                        <div class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Shalat Fardhu (Wajib)</span>
+                                <span class="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Tepat Waktu</span>
+                            </div>
+                            <div id="prayer-wajib-container" class="flex justify-between gap-1"></div>
+                        </div>
+
+                        <!-- Shalat Sunnah Utama -->
+                        <div class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sunnah Muakkad & Utama</span>
+                            </div>
+                            <div id="prayer-sunnah-container" class="flex justify-between gap-1"></div>
+                        </div>
+
+                        <!-- Ibadah Tambahan -->
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">Amalan Tambahan</span>
+                            <div id="list-ibadah-extra" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian 2: Kesehatan -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden mb-3.5 transition-colors">
+                <button onclick="window.toggleSection('section-kesehatan')" class="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-heart-pulse"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Kesehatan Jasmani</h3>
+                            <span id="count-kesehatan" class="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded-md mt-0.5 inline-block">0/0</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden hidden sm:block">
+                            <div id="progress-kesehatan" class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <i id="chevron-section-kesehatan" class="fas fa-chevron-down text-slate-400 text-xs chevron"></i>
+                    </div>
+                </button>
+                <div id="section-kesehatan" class="accordion-content bg-slate-50/70 dark:bg-slate-900/40">
+                    <div class="p-4 space-y-2" id="list-kesehatan"></div>
+                    <p class="px-5 pb-3 text-[10px] text-slate-400 dark:text-slate-500 italic">Diselaraskan dengan anjuran medis Mayo Clinic & AHA.</p>
+                </div>
+            </div>
+
+            <!-- Bagian 3: Akhlak & Adab -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden mb-4 transition-colors">
+                <button onclick="window.toggleSection('section-akhlak')" class="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                            <i class="fas fa-hands-holding-child"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Akhlak & Hubungan Sosial</h3>
+                            <span id="count-akhlak" class="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/40 px-2 py-0.5 rounded-md mt-0.5 inline-block">0/0</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden hidden sm:block">
+                            <div id="progress-akhlak" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <i id="chevron-section-akhlak" class="fas fa-chevron-down text-slate-400 text-xs chevron"></i>
+                    </div>
+                </button>
+                <div id="section-akhlak" class="accordion-content bg-slate-50/70 dark:bg-slate-900/40">
+                    <div class="p-4 space-y-2" id="list-akhlak"></div>
+                </div>
+            </div>
+
+            <!-- Jurnal Catatan Harian -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-soft border border-slate-100 dark:border-slate-700 mb-6 transition-colors">
+                <div class="flex justify-between items-center mb-2.5">
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-book-bookmark text-teal-600"></i> Catatan Muhasabah Hari Ini
+                    </span>
+                    <button id="save-journal" class="text-teal-700 dark:text-teal-300 text-xs font-semibold bg-teal-50 dark:bg-teal-900/50 px-3 py-1 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-800 transition active:scale-95">
+                        <i class="fas fa-floppy-disk mr-1"></i> Simpan
+                    </button>
+                </div>
+                <textarea id="journal-textarea" rows="2" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition resize-none" placeholder="Tulis refleksi syukur atau evaluasi diri hari ini..."></textarea>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center py-4 border-t border-slate-200 dark:border-slate-800">
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">Moeslem Daily Tracker Pro • Istiqomah Dalam Kebaikan</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL LAPORAN GRAFIK ==================== -->
+    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full relative modal-box border border-slate-100 dark:border-slate-700">
+            <button onclick="window.closeModal('report-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 text-center">Konsistensi 7 Hari</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 text-center mb-4">Grafik performa ibadah harian</p>
+            
+            <div class="relative w-full h-48 mb-4">
+                <canvas id="weekly-chart"></canvas>
+            </div>
+
+            <div class="flex justify-center items-center my-3">
+                <div class="w-16 h-16 rounded-2xl border-2 border-teal-500 flex flex-col items-center justify-center bg-teal-50 dark:bg-teal-900/30">
+                    <span id="modal-score" class="text-xl font-bold text-teal-600 dark:text-teal-400">0%</span>
+                    <span class="text-[8px] text-teal-700 dark:text-teal-300 font-semibold uppercase">Rata-rata</span>
+                </div>
+            </div>
+            <p id="modal-msg" class="text-center text-xs font-medium text-slate-700 dark:text-slate-300 mb-4 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl leading-relaxed">...</p>
+            
+            <button onclick="window.shareToWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition active:scale-95 text-sm">
+                <i class="fab fa-whatsapp text-base"></i> Bagikan ke WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL REKAP BULANAN ==================== -->
+    <div id="monthly-report-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full relative modal-box border border-slate-100 dark:border-slate-700">
+            <button onclick="window.closeModal('monthly-report-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 text-center">Rekap Kalender</h3>
+            <p id="month-name" class="text-xs text-teal-600 dark:text-teal-400 text-center mb-4 font-semibold"></p>
+
+            <div class="grid grid-cols-3 gap-2.5 mb-4">
+                <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-center">
+                    <div class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Rata-rata</div>
+                    <div id="monthly-avg" class="text-lg font-extrabold text-teal-600 dark:text-teal-400">0%</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-center">
+                    <div class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Sempurna</div>
+                    <div id="monthly-perfect" class="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">0</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-2.5 text-center">
+                    <div class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Tercatat</div>
+                    <div id="monthly-total" class="text-lg font-extrabold text-blue-600 dark:text-blue-400">0</div>
+                </div>
+            </div>
+
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Peta Keterisian Bulan Ini</p>
+            <div id="monthly-calendar" class="mb-4"></div>
+
+            <button onclick="window.closeModal('monthly-report-modal')" class="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 py-2 rounded-xl text-xs font-semibold transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL PENGATURAN & DATA ==================== -->
+    <div id="data-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full relative modal-box border border-slate-100 dark:border-slate-700">
+            <button onclick="window.closeModal('data-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 text-center mb-1">Pengaturan & Backup</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 text-center mb-5">Manajemen penyimpanan & data</p>
+
+            <div class="space-y-3">
+                <button onclick="window.backupData()" class="w-full bg-slate-50 dark:bg-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 px-4 rounded-xl flex items-center justify-between transition text-sm font-medium border border-slate-200 dark:border-slate-600">
+                    <span class="flex items-center gap-2.5">
+                        <i class="fas fa-file-arrow-down text-teal-600 dark:text-teal-400"></i>
+                        <span>Ekspor JSON (Backup)</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs text-slate-400"></i>
+                </button>
+
+                <button onclick="window.resetData()" class="w-full bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 py-3 px-4 rounded-xl flex items-center justify-between transition text-sm font-medium border border-red-200 dark:border-red-900/60">
+                    <span class="flex items-center gap-2.5">
+                        <i class="fas fa-trash-can text-red-500"></i>
+                        <span>Reset Seluruh Data</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs text-red-400"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL PROFIL ==================== -->
+    <div id="profile-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-sm w-full relative modal-box border border-slate-100 dark:border-slate-700">
+            <button onclick="window.closeModal('profile-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 text-center">Edit Profil</h3>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Nama Tampilan</label>
+            <input id="edit-name-input" type="text" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-teal-500 transition mb-4" placeholder="Nama Anda">
+            <button onclick="window.saveProfile()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold transition active:scale-95 text-sm">
+                Simpan Perubahan
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL KONFIRMASI LOGOUT ==================== -->
+    <div id="logout-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center modal-box border border-slate-100 dark:border-slate-700">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/40 text-amber-500 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-arrow-right-from-bracket text-xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-1">Keluar Akun?</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Anda dapat masuk kembali kapan saja.</p>
+            <div class="flex gap-2">
+                <button onclick="window.cancelLogout()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-xl text-xs font-semibold">Batal</button>
+                <button onclick="window.confirmLogout()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-bold">Ya, Keluar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL KONFIRMASI RESET ==================== -->
+    <div id="reset-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden" style="background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center modal-box border border-slate-100 dark:border-slate-700">
+            <div class="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-500 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-triangle-exclamation text-xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-1">Hapus Semua Data?</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Riwayat ibadah yang tersimpan akan dihapus secara permanen.</p>
+            <div class="flex gap-2">
+                <button onclick="window.cancelResetData()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-xl text-xs font-semibold">Batal</button>
+                <button onclick="window.confirmResetData()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-bold">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCRIPT UTAMA ==================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signOut, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            sendPasswordResetEmail, 
+            updateProfile 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            onSnapshot, 
+            collection, 
+            getDocs, 
+            deleteDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ======================== KONFIGURASI FIREBASE ========================
         const firebaseConfig = {
-  apiKey: "AIzaSyALR5_ku0j9TcCguUM8S2HujnYpsh_nj-E",
-  authDomain: "habit-tracker-5258f.firebaseapp.com",
-  projectId: "habit-tracker-5258f",
-  storageBucket: "habit-tracker-5258f.firebasestorage.app",
-  messagingSenderId: "857648541500",
-  appId: "1:857648541500:web:0d223a88e9645cea1a7839",
-  measurementId: "G-W7KTFBYDSV"
-};
-        // ======================================================================
+            apiKey: "AIzaSyALR5_ku0j9TcCguUM8S2HujnYpsh_nj-E",
+            authDomain: "habit-tracker-5258f.firebaseapp.com",
+            projectId: "habit-tracker-5258f",
+            storageBucket: "habit-tracker-5258f.firebasestorage.app",
+            messagingSenderId: "857648541500",
+            appId: "1:857648541500:web:0d223a88e9645cea1a7839",
+            measurementId: "G-W7KTFBYDSV"
+        };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let app, auth, db;
+        let isFirebaseAvailable = false;
 
-        enableIndexedDbPersistence(db).catch(console.warn);
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            isFirebaseAvailable = true;
+        } catch (err) {
+            console.warn("Inisialisasi Firebase gagal:", err);
+            isFirebaseAvailable = false;
+        }
 
         // ======================== DATA MASTER HABIT ========================
         const prayerWajib = [
-            { id: 'subuh', label: 'S', name: 'Subuh' }, { id: 'dzuhur', label: 'D', name: 'Dzuhur' },
-            { id: 'ashar', label: 'A', name: 'Ashar' }, { id: 'maghrib', label: 'M', name: 'Maghrib' }, { id: 'isya', label: 'I', name: 'Isya' }
+            { id: 'subuh', label: 'S', name: 'Subuh' },
+            { id: 'dzuhur', label: 'D', name: 'Dzuhur' },
+            { id: 'ashar', label: 'A', name: 'Ashar' },
+            { id: 'maghrib', label: 'M', name: 'Maghrib' },
+            { id: 'isya', label: 'I', name: 'Isya' }
         ];
         const prayerSunnah = [
-            { id: 'rawatib', label: 'Rw', name: 'Rawatib' }, { id: 'dhuha', label: 'Dh', name: 'Dhuha' },
-            { id: 'tahajud', label: 'Th', name: 'Tahajud' }, { id: 'witir', label: 'Wt', name: 'Witir' }, { id: 'isyroq', label: 'Is', name: 'Isyroq' }
+            { id: 'rawatib', label: 'Rw', name: 'Rawatib' },
+            { id: 'dhuha', label: 'Dh', name: 'Dhuha' },
+            { id: 'tahajud', label: 'Th', name: 'Tahajud' },
+            { id: 'witir', label: 'Wt', name: 'Witir' },
+            { id: 'isyroq', label: 'Is', name: 'Isyroq' }
         ];
         const ibadahExtra = [
-            { id: 'taubat', text: 'Shalat Taubat', icon: 'fa-hands-praying' }, { id: 'hajat', text: 'Shalat Hajat', icon: 'fa-star' },
-            { id: 'puasa', text: 'Puasa Sunnah', icon: 'fa-utensils' }, { id: 'quran', text: 'Baca Al-Qur\'an + Tadabbur', icon: 'fa-book-quran' },
-            { id: 'sedekah', text: 'Sedekah Harian', icon: 'fa-hand-holding-dollar' }, { id: 'dzikir', text: 'Dzikir Pagi & Petang', icon: 'fa-hand-holding-heart' }
+            { id: 'quran', text: "Baca Al-Qur'an + Tadabbur", icon: 'fa-book-quran' },
+            { id: 'dzikir', text: 'Dzikir Pagi & Petang', icon: 'fa-hand-holding-heart' },
+            { id: 'sedekah', text: 'Sedekah Harian', icon: 'fa-hand-holding-dollar' },
+            { id: 'puasa', text: 'Puasa Sunnah', icon: 'fa-utensils' },
+            { id: 'taubat', text: 'Shalat Taubat', icon: 'fa-hands-praying' },
+            { id: 'hajat', text: 'Shalat Hajat', icon: 'fa-star' }
         ];
         const healthHabits = [
-            { id: 'tidur', text: 'Tidur Berkualitas 7-8 Jam', desc: 'Regenerasi sel & fungsi otak', icon: 'fa-bed' },
-            { id: 'air', text: 'Minum Air Putih 2 Liter', desc: 'Hidrasi optimal (Mayo Clinic)', icon: 'fa-glass-water' },
-            { id: 'gerak', text: 'Jalan Kaki/Cardio 30 Mnt', desc: 'Kesehatan Jantung (AHA)', icon: 'fa-person-walking' },
-            { id: 'diet', text: 'Diet Whole Food (Sayur/Buah)', desc: 'Hindari makanan olahan', icon: 'fa-carrot' }
+            { id: 'tidur', text: 'Tidur Berkualitas 7-8 Jam', desc: 'Pemulihan sel tubuh optimal', icon: 'fa-bed' },
+            { id: 'air', text: 'Minum Air Putih 2 Liter', desc: 'Menjaga metabolisme & hidrasi', icon: 'fa-glass-water' },
+            { id: 'gerak', text: 'Jalan Santai / Olahraga 30 Menit', desc: 'Menjaga daya tahan jantung', icon: 'fa-person-walking' },
+            { id: 'diet', text: 'Makanan Sehat & Kurangi Gula', desc: 'Makan halal dan thayyib', icon: 'fa-apple-whole' }
         ];
         const akhlakHabits = [
-            { id: 'silaturahmi', text: 'Silaturahmi Karena Allah', icon: 'fa-handshake' },
-            { id: 'tidakKasar', text: 'Tidak Berkata Kasar', icon: 'fa-comment-dots' },
-            { id: 'adabBaik', text: 'Menjaga Adab & Akhlak Baik', icon: 'fa-smile' },
-            { id: 'tidakBohong', text: 'Tidak Berbohong', icon: 'fa-check-double' },
-            { id: 'ajakKebaikan', text: 'Mengajak Orang Kepada Kebaikan', icon: 'fa-bullhorn' }
+            { id: 'silaturahmi', text: 'Silaturahmi & Menyapa Sesama', icon: 'fa-handshake' },
+            { id: 'tidakKasar', text: 'Menjaga Lisan & Lemah Lembut', icon: 'fa-comment-dots' },
+            { id: 'adabBaik', text: 'Berbakti / Berbuat Baik ke Keluarga', icon: 'fa-heart' },
+            { id: 'tidakBohong', text: 'Jujur & Menepati Janji', icon: 'fa-check-double' },
+            { id: 'ajakKebaikan', text: 'Saling Mengingatkan Kebaikan', icon: 'fa-bullhorn' }
         ];
+
         const allHabits = [...prayerWajib, ...prayerSunnah, ...ibadahExtra, ...healthHabits, ...akhlakHabits];
 
-        function formatDate(date) { const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-        function getTodayKey() { return formatDate(new Date()); }
+        function formatDate(date) {
+            const d = new Date(date);
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${d.getFullYear()}-${month}-${day}`;
+        }
 
+        function getTodayKey() {
+            return formatDate(new Date());
+        }
+
+        // ======================== STATE GLOBAL ========================
+        let isGuestMode = false;
         let currentUser = null;
-        let currentViewDate = getTodayKey();      // tanggal yang sedang dilihat
+        let currentViewDate = getTodayKey();
         let currentDailyData = {};
         let currentJournal = "";
         let unsubscribeDaily = null;
         let streakValue = 0;
-        let weeklyScores = [0,0,0,0,0,0,0];
-        let chart = null;
+        let weeklyScores = [0, 0, 0, 0, 0, 0, 0];
+        let monthlyData = {};
+        let chartInstance = null;
+        let darkModeEnabled = localStorage.getItem('tracker_dark_mode') === 'true';
 
-        // Elemen DOM
-        const loginScreen = document.getElementById('login-screen');
-        const appScreen = document.getElementById('app-screen');
-        const userAvatar = document.getElementById('user-avatar');
-        const userNameSpan = document.getElementById('user-name');
-        const logoutBtn = document.getElementById('logout-btn');
-        const progressText = document.getElementById('progress-text');
-        const progressBar = document.getElementById('progress-bar');
-        const streakBadge = document.getElementById('streak-badge');
-        const journalTextarea = document.getElementById('journal-textarea');
-        const saveJournalBtn = document.getElementById('save-journal');
-        const prayerWajibContainer = document.getElementById('prayer-wajib-container');
-        const prayerSunnahContainer = document.getElementById('prayer-sunnah-container');
-        const listIbadahExtra = document.getElementById('list-ibadah-extra');
-        const listKesehatan = document.getElementById('list-kesehatan');
-        const listAkhlak = document.getElementById('list-akhlak');
-        const countIbadahSpan = document.getElementById('count-ibadah');
-        const countKesehatanSpan = document.getElementById('count-kesehatan');
-        const countAkhlakSpan = document.getElementById('count-akhlak');
-        const currentDateSpan = document.getElementById('current-date');
-        const viewDateInput = document.getElementById('view-date');
-        const viewDatePercent = document.getElementById('view-date-percent');
-        const todayBtn = document.getElementById('today-btn');
-        const viewDateContainer = document.getElementById('view-date-container');
+        // Helper Seleksi DOM Aman
+        const $ = (id) => document.getElementById(id);
 
-        function computePercent(data) {
-            let total = 0, done = 0;
-            allHabits.forEach(h => { total++; if (data[h.id]) done++; });
-            return total ? Math.round((done/total)*100) : 0;
+        // ======================== TOAST NOTIFIKASI ========================
+        function showToast(message, type = 'info', duration = 2600) {
+            const container = $('toast-container');
+            if (!container) return;
+            const colors = {
+                success: 'bg-emerald-600',
+                error: 'bg-rose-600',
+                info: 'bg-slate-800 dark:bg-slate-700',
+                warning: 'bg-amber-600'
+            };
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                info: 'fa-circle-info',
+                warning: 'fa-triangle-exclamation'
+            };
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-semibold transform transition-all duration-300 translate-y-3 opacity-0 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fas ${icons[type] || icons.info} text-base shrink-0"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-3', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-3', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
         }
 
-        function calculateStreak(dailyDataList) {
-            let streak = 0;
-            for (let day of dailyDataList) {
-                const data = day.data;
-                const allWajib = prayerWajib.every(p => data[p.id] === true);
-                const sunnahHealthAkhlakIds = [...prayerSunnah, ...ibadahExtra, ...healthHabits, ...akhlakHabits].map(h => h.id);
+        // ======================== MODE TAMPILAN ========================
+        function applyDarkMode() {
+            const darkIcon = $('dark-toggle-icon');
+            const loginDarkIcon = $('login-dark-icon');
+            if (darkModeEnabled) {
+                document.documentElement.classList.add('dark');
+                if (darkIcon) darkIcon.className = 'fas fa-sun text-amber-300 text-sm';
+                if (loginDarkIcon) loginDarkIcon.className = 'fas fa-sun text-amber-300';
+            } else {
+                document.documentElement.classList.remove('dark');
+                if (darkIcon) darkIcon.className = 'fas fa-moon text-slate-200 text-sm';
+                if (loginDarkIcon) loginDarkIcon.className = 'fas fa-moon text-slate-200';
+            }
+            localStorage.setItem('tracker_dark_mode', darkModeEnabled);
+        }
+
+        window.toggleDarkMode = () => {
+            darkModeEnabled = !darkModeEnabled;
+            applyDarkMode();
+            showToast(darkModeEnabled ? 'Mode gelap aktif 🌙' : 'Mode terang aktif ☀️', 'info', 1500);
+            if (chartInstance) {
+                setTimeout(initOrUpdateWeeklyChart, 100);
+            }
+        };
+
+        // ======================== FORMULASI PERHITUNGAN ========================
+        function computePercent(data) {
+            if (!data) return 0;
+            let total = allHabits.length;
+            let done = 0;
+            for (let h of allHabits) {
+                if (data[h.id] === true) done++;
+            }
+            return total > 0 ? Math.round((done / total) * 100) : 0;
+        }
+
+        function computeCategoryCounts(data) {
+            const d = data || {};
+            const ibadahItems = [...prayerWajib, ...prayerSunnah, ...ibadahExtra];
+            const ibadahDone = ibadahItems.filter(h => d[h.id] === true).length;
+            const kesehatanDone = healthHabits.filter(h => d[h.id] === true).length;
+            const akhlakDone = akhlakHabits.filter(h => d[h.id] === true).length;
+
+            return {
+                ibadah: { done: ibadahDone, total: ibadahItems.length, pct: Math.round((ibadahDone / ibadahItems.length) * 100) },
+                kesehatan: { done: kesehatanDone, total: healthHabits.length, pct: Math.round((kesehatanDone / healthHabits.length) * 100) },
+                akhlak: { done: akhlakDone, total: akhlakHabits.length, pct: Math.round((akhlakDone / akhlakHabits.length) * 100) }
+            };
+        }
+
+        // Perbaikan Bug Streak: Jangan hanguskan streak hari kemarin jika hari ini baru berjalan
+        function calculateStreak(dailyListDesc) {
+            if (!dailyListDesc || dailyListDesc.length === 0) return 0;
+
+            const isDayCompleted = (data) => {
+                if (!data) return false;
+                const allWajibDone = prayerWajib.every(p => data[p.id] === true);
+                const sunnahHealthAkhlak = [...prayerSunnah, ...ibadahExtra, ...healthHabits, ...akhlakHabits];
                 let count = 0;
-                for (let id of sunnahHealthAkhlakIds) if (data[id] === true) count++;
-                if (allWajib && count >= 3) streak++;
-                else break;
+                for (let item of sunnahHealthAkhlak) {
+                    if (data[item.id] === true) count++;
+                }
+                return allWajibDone && count >= 2;
+            };
+
+            const todayStr = getTodayKey();
+            let startIndex = 0;
+
+            // Jika item teratas adalah hari ini dan belum selesai, mulai hitung dari kemarin
+            if (dailyListDesc[0]?.date === todayStr) {
+                if (isDayCompleted(dailyListDesc[0].data)) {
+                    startIndex = 0;
+                } else {
+                    startIndex = 1;
+                }
+            }
+
+            let streak = 0;
+            for (let i = startIndex; i < dailyListDesc.length; i++) {
+                if (isDayCompleted(dailyListDesc[i].data)) {
+                    streak++;
+                } else {
+                    break;
+                }
             }
             return streak;
         }
 
+        // ======================== RENDER TAMPILAN (UI) ========================
         function renderUI() {
-            if (!currentDailyData) currentDailyData = {};
-            const data = currentDailyData;
+            const data = currentDailyData || {};
 
-            prayerWajibContainer.innerHTML = prayerWajib.map(p => {
-                const active = data[p.id] ? 'active' : 'inactive';
-                return `<div class="flex flex-col items-center gap-1"><button onclick="window.toggleHabit('${p.id}')" class="prayer-circle wajib ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
-            }).join('');
-            
-            prayerSunnahContainer.innerHTML = prayerSunnah.map(p => {
-                const active = data[p.id] ? 'active' : 'inactive';
-                return `<div class="flex flex-col items-center gap-1"><button onclick="window.toggleHabit('${p.id}')" class="prayer-circle sunnah-circle ${active}">${p.label}</button><span class="text-[10px] text-slate-500 font-medium">${p.name}</span></div>`;
-            }).join('');
-            
-            listIbadahExtra.innerHTML = ibadahExtra.map(h => {
-                const activeStyle = data[h.id] ? 'border-teal-200 bg-teal-50' : 'border-slate-100';
-                const iconClass = data[h.id] ? 'bg-teal-500 border-teal-500' : 'bg-white';
-                const svgClass = data[h.id] ? 'block' : 'hidden';
-                return `<div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-center bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
-                    <div class="relative pointer-events-none"><div class="w-5 h-5 border-2 border-slate-300 rounded-[6px] transition flex items-center justify-center ${iconClass}"><svg class="w-3 h-3 text-white ${svgClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></div>
-                    <span class="ml-3 flex-1 text-slate-700 text-sm font-medium">${h.text}</span><i class="fas ${h.icon} text-slate-300 text-sm"></i></div>`;
-            }).join('');
-            
-            listKesehatan.innerHTML = healthHabits.map(h => {
-                const activeStyle = data[h.id] ? 'border-blue-200 bg-blue-50' : 'border-slate-100';
-                const iconClass = data[h.id] ? 'bg-blue-500 border-blue-500' : 'bg-white';
-                const svgClass = data[h.id] ? 'block' : 'hidden';
-                return `<div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-start bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
-                    <div class="relative mt-1 pointer-events-none"><div class="w-5 h-5 border-2 border-slate-300 rounded-[6px] transition flex items-center justify-center ${iconClass}"><svg class="w-3 h-3 text-white ${svgClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></div>
-                    <div class="ml-3 flex-1"><span class="block text-slate-700 text-sm font-semibold leading-tight">${h.text}</span><span class="block text-[10px] text-slate-400 mt-1">${h.desc}</span></div><i class="fas ${h.icon} text-slate-300 text-sm mt-1"></i></div>`;
-            }).join('');
-            
-            listAkhlak.innerHTML = akhlakHabits.map(h => {
-                const activeStyle = data[h.id] ? 'border-purple-200 bg-purple-50' : 'border-slate-100';
-                const iconClass = data[h.id] ? 'bg-purple-500 border-purple-500' : 'bg-white';
-                const svgClass = data[h.id] ? 'block' : 'hidden';
-                return `<div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-center bg-white p-3 rounded-xl border ${activeStyle} transition-all hover:bg-slate-50 mb-2">
-                    <div class="relative pointer-events-none"><div class="w-5 h-5 border-2 border-slate-300 rounded-[6px] transition flex items-center justify-center ${iconClass}"><svg class="w-3 h-3 text-white ${svgClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></div>
-                    <span class="ml-3 flex-1 text-slate-700 text-sm font-medium">${h.text}</span><i class="fas ${h.icon} text-slate-300 text-sm"></i></div>`;
-            }).join('');
-            
-            const totalIbadah = prayerWajib.length + prayerSunnah.length + ibadahExtra.length;
-            const doneIbadah = [...prayerWajib, ...prayerSunnah, ...ibadahExtra].filter(h => data[h.id]).length;
-            countIbadahSpan.innerText = `${doneIbadah}/${totalIbadah}`;
-            const doneKesehatan = healthHabits.filter(h => data[h.id]).length;
-            countKesehatanSpan.innerText = `${doneKesehatan}/${healthHabits.length}`;
-            const doneAkhlak = akhlakHabits.filter(h => data[h.id]).length;
-            countAkhlakSpan.innerText = `${doneAkhlak}/${akhlakHabits.length}`;
-            
+            // 1. Shalat Wajib
+            const wajibBox = $('prayer-wajib-container');
+            if (wajibBox) {
+                wajibBox.innerHTML = prayerWajib.map(p => {
+                    const active = data[p.id] ? 'active' : 'inactive';
+                    return `
+                    <div class="flex flex-col items-center gap-1.5 flex-1">
+                        <button onclick="window.toggleHabit('${p.id}')" class="prayer-circle wajib ${active}">
+                            ${p.label}
+                            ${data[p.id] ? '<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400"></span>' : ''}
+                        </button>
+                        <span class="text-[10px] font-semibold ${data[p.id] ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'}">${p.name}</span>
+                    </div>`;
+                }).join('');
+            }
+
+            // 2. Shalat Sunnah
+            const sunnahBox = $('prayer-sunnah-container');
+            if (sunnahBox) {
+                sunnahBox.innerHTML = prayerSunnah.map(p => {
+                    const active = data[p.id] ? 'active' : 'inactive';
+                    return `
+                    <div class="flex flex-col items-center gap-1.5 flex-1">
+                        <button onclick="window.toggleHabit('${p.id}')" class="prayer-circle sunnah-circle ${active}">
+                            ${p.label}
+                            ${data[p.id] ? '<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400"></span>' : ''}
+                        </button>
+                        <span class="text-[10px] font-semibold ${data[p.id] ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}">${p.name}</span>
+                    </div>`;
+                }).join('');
+            }
+
+            // 3. Ibadah Tambahan
+            const extraBox = $('list-ibadah-extra');
+            if (extraBox) {
+                extraBox.innerHTML = ibadahExtra.map(h => {
+                    const isActive = !!data[h.id];
+                    return `
+                    <div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-center bg-white dark:bg-slate-800 p-3 rounded-xl border transition-all ${isActive ? 'border-teal-400 dark:border-teal-600 bg-teal-50/50 dark:bg-teal-900/30' : 'border-slate-100 dark:border-slate-700/70 hover:border-slate-200'} cursor-pointer">
+                        <div class="w-5 h-5 border-2 rounded-lg flex items-center justify-center shrink-0 transition ${isActive ? 'bg-teal-600 border-teal-600' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500'}">
+                            <i class="fas fa-check text-[10px] text-white ${isActive ? 'block' : 'hidden'}"></i>
+                        </div>
+                        <span class="ml-3 flex-1 text-xs font-medium text-slate-700 dark:text-slate-200">${h.text}</span>
+                        <i class="fas ${h.icon} text-xs ${isActive ? 'text-teal-600 dark:text-teal-400' : 'text-slate-300 dark:text-slate-600'} shrink-0"></i>
+                    </div>`;
+                }).join('');
+            }
+
+            // 4. Kesehatan
+            const healthBox = $('list-kesehatan');
+            if (healthBox) {
+                healthBox.innerHTML = healthHabits.map(h => {
+                    const isActive = !!data[h.id];
+                    return `
+                    <div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-start bg-white dark:bg-slate-800 p-3 rounded-xl border transition-all ${isActive ? 'border-blue-400 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-900/30' : 'border-slate-100 dark:border-slate-700/70 hover:border-slate-200'} cursor-pointer">
+                        <div class="w-5 h-5 border-2 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition ${isActive ? 'bg-blue-600 border-blue-600' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500'}">
+                            <i class="fas fa-check text-[10px] text-white ${isActive ? 'block' : 'hidden'}"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <span class="block text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">${h.text}</span>
+                            <span class="block text-[10px] text-slate-400 mt-0.5">${h.desc}</span>
+                        </div>
+                        <i class="fas ${h.icon} text-xs ${isActive ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'} shrink-0 mt-1"></i>
+                    </div>`;
+                }).join('');
+            }
+
+            // 5. Akhlak
+            const akhlakBox = $('list-akhlak');
+            if (akhlakBox) {
+                akhlakBox.innerHTML = akhlakHabits.map(h => {
+                    const isActive = !!data[h.id];
+                    return `
+                    <div onclick="window.toggleHabit('${h.id}')" class="click-area flex items-center bg-white dark:bg-slate-800 p-3 rounded-xl border transition-all ${isActive ? 'border-purple-400 dark:border-purple-600 bg-purple-50/50 dark:bg-purple-900/30' : 'border-slate-100 dark:border-slate-700/70 hover:border-slate-200'} cursor-pointer">
+                        <div class="w-5 h-5 border-2 rounded-lg flex items-center justify-center shrink-0 transition ${isActive ? 'bg-purple-600 border-purple-600' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500'}">
+                            <i class="fas fa-check text-[10px] text-white ${isActive ? 'block' : 'hidden'}"></i>
+                        </div>
+                        <span class="ml-3 flex-1 text-xs font-medium text-slate-700 dark:text-slate-200">${h.text}</span>
+                        <i class="fas ${h.icon} text-xs ${isActive ? 'text-purple-500' : 'text-slate-300 dark:text-slate-600'} shrink-0"></i>
+                    </div>`;
+                }).join('');
+            }
+
+            // Hitungan & Bar
+            const cat = computeCategoryCounts(data);
+            if ($('count-ibadah')) $('count-ibadah').innerText = `${cat.ibadah.done}/${cat.ibadah.total}`;
+            if ($('count-kesehatan')) $('count-kesehatan').innerText = `${cat.kesehatan.done}/${cat.kesehatan.total}`;
+            if ($('count-akhlak')) $('count-akhlak').innerText = `${cat.akhlak.done}/${cat.akhlak.total}`;
+
+            if ($('progress-ibadah')) $('progress-ibadah').style.width = `${cat.ibadah.pct}%`;
+            if ($('progress-kesehatan')) $('progress-kesehatan').style.width = `${cat.kesehatan.pct}%`;
+            if ($('progress-akhlak')) $('progress-akhlak').style.width = `${cat.akhlak.pct}%`;
+
+            // Progress Total
             const percent = computePercent(data);
-            progressText.innerText = percent + '%';
-            progressBar.style.width = percent + '%';
-            // Update persentase di samping date picker
-            viewDatePercent.innerText = `${percent}%`;
-            const iconCont = document.getElementById('progress-icon-container');
-            if(percent === 100) iconCont.className = "h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600";
-            else if(percent > 50) iconCont.className = "h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600";
-            else iconCont.className = "h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400";
-            
-            journalTextarea.value = currentJournal || "";
-            
-            // Ubah warna border jika sedang melihat hari lain
-            if (currentViewDate === getTodayKey()) {
-                viewDateContainer.classList.remove('border-2', 'border-amber-400', 'bg-amber-50');
-                viewDateContainer.classList.add('border', 'border-slate-200');
-            } else {
-                viewDateContainer.classList.add('border-2', 'border-amber-400', 'bg-amber-50');
-                viewDateContainer.classList.remove('border', 'border-slate-200');
+            if ($('progress-text')) $('progress-text').innerText = `${percent}%`;
+            if ($('progress-bar')) {
+                $('progress-bar').style.width = `${percent}%`;
+                $('progress-bar').style.background = percent === 100 
+                    ? 'linear-gradient(90deg, #10b981, #059669)' 
+                    : 'linear-gradient(90deg, #0d9488, #14b8a6)';
             }
-        }
+            if ($('view-date-percent')) $('view-date-percent').innerText = `${percent}%`;
 
-        async function saveDailyToFirestore(uid, date, newData, newJournal) {
-            const docRef = doc(db, 'users', uid, 'daily', date);
-            const updateObj = { data: newData, updatedAt: new Date().toISOString(), date: date };
-            if (newJournal !== undefined) updateObj.journal = newJournal;
-            await setDoc(docRef, updateObj, { merge: true });
-        }
-
-        window.toggleHabit = async (habitId) => {
-            if (!currentUser) return;
-            const newData = { ...currentDailyData };
-            newData[habitId] = !newData[habitId];
-            currentDailyData = newData;
-            renderUI();
-            await saveDailyToFirestore(currentUser.uid, currentViewDate, newData, currentJournal);
-            // Update streak dan weekly jika tanggal yang diubah adalah hari ini atau berpengaruh pada streak?
-            // Streak & weekly selalu berdasarkan hari ini, jadi perlu refresh jika mengubah hari ini atau hari lain yang mempengaruhi 7 hari terakhir.
-            // Untuk sederhana, refresh streak & weekly setiap kali ada perubahan.
-            await updateStreakAndWeekly();
-        };
-
-        async function saveJournal() {
-            if (!currentUser) return;
-            const newJournal = journalTextarea.value;
-            currentJournal = newJournal;
-            await saveDailyToFirestore(currentUser.uid, currentViewDate, currentDailyData, newJournal);
-            showStatusModal("Jurnal", "Catatan tersimpan", "success");
-        }
-
-        async function updateStreakAndWeekly() {
-            if (!currentUser) return;
-            const uid = currentUser.uid;
-            const today = new Date();
-            const last7Days = [];
-            for (let i = 6; i >= 0; i--) {
-                let d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const dateStr = formatDate(d);
-                last7Days.push(dateStr);
+            const iconCont = $('progress-icon-container');
+            if (iconCont) {
+                iconCont.className = percent === 100 
+                    ? "h-11 w-11 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400"
+                    : "h-11 w-11 bg-teal-50 dark:bg-teal-900/40 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400";
             }
-            const promises = last7Days.map(date => getDoc(doc(db, 'users', uid, 'daily', date)));
-            const snapshots = await Promise.all(promises);
-            const dailyList = [];
-            for (let i=0; i<last7Days.length; i++) {
-                const snap = snapshots[i];
-                if (snap.exists()) {
-                    const d = snap.data();
-                    dailyList.push({ date: last7Days[i], data: d.data, score: computePercent(d.data) });
-                    weeklyScores[i] = computePercent(d.data);
+
+            if ($('journal-textarea')) {
+                $('journal-textarea').value = currentJournal || "";
+            }
+
+            // Highlight tanggal bila bukan hari ini
+            const dateCont = $('view-date-container');
+            if (dateCont) {
+                if (currentViewDate === getTodayKey()) {
+                    dateCont.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50/50', 'dark:bg-amber-950/20');
                 } else {
-                    weeklyScores[i] = 0;
-                    dailyList.push({ date: last7Days[i], data: {}, score: 0 });
+                    dateCont.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50/50', 'dark:bg-amber-950/20');
                 }
             }
-            const sortedDesc = [...dailyList].reverse();
-            streakValue = calculateStreak(sortedDesc);
-            streakBadge.innerHTML = `<i class="fas fa-fire text-orange-500 mr-1"></i> Streak ${streakValue} hari`;
-            if (chart) {
-                chart.data.datasets[0].data = weeklyScores;
-                chart.update();
+        }
+
+        // ======================== PENYIMPANAN DATA (STORAGE) ========================
+        async function saveData(date, dataObj, journalStr) {
+            if (isGuestMode || !currentUser) {
+                // Simpan ke LocalStorage
+                const payload = {
+                    data: dataObj,
+                    journal: journalStr !== undefined ? journalStr : currentJournal,
+                    updatedAt: new Date().toISOString()
+                };
+                localStorage.setItem(`guest_tracker_${date}`, JSON.stringify(payload));
+                return;
+            }
+
+            // Simpan ke Firestore
+            try {
+                const docRef = doc(db, 'users', currentUser.uid, 'daily', date);
+                const updateObj = {
+                    data: dataObj,
+                    updatedAt: new Date().toISOString(),
+                    date: date
+                };
+                if (journalStr !== undefined) updateObj.journal = journalStr;
+                await setDoc(docRef, updateObj, { merge: true });
+            } catch (err) {
+                console.error("Gagal simpan ke cloud:", err);
+                showToast('Gagal sinkron cloud, menyimpan ke lokal', 'warning');
+                localStorage.setItem(`offline_backup_${date}`, JSON.stringify({ data: dataObj, journal: journalStr }));
             }
         }
 
-        function subscribeToDate(uid, date) {
-            if (unsubscribeDaily) unsubscribeDaily();
-            const docRef = doc(db, 'users', uid, 'daily', date);
-            unsubscribeDaily = onSnapshot(docRef, (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    currentDailyData = data.data || {};
-                    currentJournal = data.journal || "";
+        async function loadDataForDate(date) {
+            if (isGuestMode || !currentUser) {
+                const raw = localStorage.getItem(`guest_tracker_${date}`);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        currentDailyData = parsed.data || {};
+                        currentJournal = parsed.journal || "";
+                    } catch {
+                        currentDailyData = {};
+                        currentJournal = "";
+                    }
                 } else {
                     currentDailyData = {};
                     currentJournal = "";
                 }
                 renderUI();
+                return;
+            }
+
+            // Firestore Snapshot
+            if (unsubscribeDaily) unsubscribeDaily();
+            const docRef = doc(db, 'users', currentUser.uid, 'daily', date);
+            unsubscribeDaily = onSnapshot(docRef, (snap) => {
+                if (snap.exists()) {
+                    const val = snap.data();
+                    currentDailyData = val.data || {};
+                    currentJournal = val.journal || "";
+                } else {
+                    currentDailyData = {};
+                    currentJournal = "";
+                }
+                renderUI();
+            }, (error) => {
+                console.warn("Snapshot error:", error);
+                // Fallback baca lokal
+                const raw = localStorage.getItem(`offline_backup_${date}`);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    currentDailyData = parsed.data || {};
+                    currentJournal = parsed.journal || "";
+                }
+                renderUI();
             });
         }
 
-        async function migrateLocalStorageToFirestore(uid) {
-            const userDocRef = doc(db, 'users', uid);
-            const userSnap = await getDoc(userDocRef);
-            if (userSnap.exists() && userSnap.data().migrated === true) return false;
-            let migratedCount = 0;
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    const raw = localStorage.getItem(key);
-                    try {
-                        const dataObj = JSON.parse(raw);
-                        const docRef = doc(db, 'users', uid, 'daily', key);
-                        await setDoc(docRef, { data: dataObj, updatedAt: new Date().toISOString(), date: key }, { merge: true });
-                        migratedCount++;
-                    } catch(e) {}
+        window.toggleHabit = async (habitId) => {
+            const newData = { ...currentDailyData };
+            newData[habitId] = !newData[habitId];
+            currentDailyData = newData;
+            renderUI();
+
+            if (navigator.vibrate) navigator.vibrate(20);
+
+            await saveData(currentViewDate, newData, currentJournal);
+            await updateStreakAndWeekly();
+        };
+
+        window.saveJournal = async () => {
+            const input = $('journal-textarea');
+            const val = input ? input.value : "";
+            currentJournal = val;
+            await saveData(currentViewDate, currentDailyData, val);
+            showToast('Jurnal tersimpan ✓', 'success');
+        };
+
+        // ======================== STREAK & DATA MINGGUAN ========================
+        async function updateStreakAndWeekly() {
+            const today = new Date();
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                let d = new Date(today);
+                d.setDate(today.getDate() - i);
+                last7Days.push(formatDate(d));
+            }
+
+            const dailyList = [];
+
+            if (isGuestMode || !currentUser) {
+                for (let i = 0; i < last7Days.length; i++) {
+                    const dateKey = last7Days[i];
+                    const raw = localStorage.getItem(`guest_tracker_${dateKey}`);
+                    let dData = {};
+                    if (raw) {
+                        try { dData = JSON.parse(raw).data || {}; } catch {}
+                    }
+                    weeklyScores[i] = computePercent(dData);
+                    dailyList.push({ date: dateKey, data: dData });
+                }
+            } else {
+                try {
+                    const promises = last7Days.map(date => getDoc(doc(db, 'users', currentUser.uid, 'daily', date)));
+                    const snapshots = await Promise.all(promises);
+                    for (let i = 0; i < last7Days.length; i++) {
+                        const snap = snapshots[i];
+                        if (snap.exists()) {
+                            const d = snap.data();
+                            dailyList.push({ date: last7Days[i], data: d.data || {} });
+                            weeklyScores[i] = computePercent(d.data || {});
+                        } else {
+                            weeklyScores[i] = 0;
+                            dailyList.push({ date: last7Days[i], data: {} });
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Gagal fetch streak Firestore:", e);
                 }
             }
-            await setDoc(userDocRef, { migrated: true, email: currentUser.email, displayName: currentUser.displayName || currentUser.email.split('@')[0], createdAt: new Date().toISOString() }, { merge: true });
-            return true;
+
+            const sortedDesc = [...dailyList].reverse();
+            streakValue = calculateStreak(sortedDesc);
+
+            if ($('streak-text')) {
+                $('streak-text').innerText = `Streak ${streakValue} hari`;
+            }
+
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = weeklyScores;
+                chartInstance.update();
+            }
+
+            await loadMonthlyData();
         }
 
-        // ======================== FUNGSI AUTH EMAIL/PASSWORD ========================
-        function showEmailLoginModal() {
-            document.getElementById('email-login-modal').classList.remove('hidden');
+        // ======================== DATA BULANAN & KALENDER ========================
+        async function loadMonthlyData() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            monthlyData = {};
+
+            const startStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
+            const endStr = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+
+            if (isGuestMode || !currentUser) {
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    const raw = localStorage.getItem(`guest_tracker_${dStr}`);
+                    if (raw) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            monthlyData[dStr] = computePercent(parsed.data || {});
+                        } catch {}
+                    }
+                }
+            } else {
+                try {
+                    const collRef = collection(db, 'users', currentUser.uid, 'daily');
+                    const snap = await getDocs(collRef);
+                    snap.forEach(docSnap => {
+                        const dateId = docSnap.id;
+                        if (dateId >= startStr && dateId <= endStr) {
+                            monthlyData[dateId] = computePercent(docSnap.data().data || {});
+                        }
+                    });
+                } catch (e) {
+                    console.warn("Gagal load monthly:", e);
+                }
+            }
+            renderMonthlyCalendar();
         }
-        function closeEmailModal() {
-            document.getElementById('email-login-modal').classList.add('hidden');
+
+        function renderMonthlyCalendar() {
+            const cal = $('monthly-calendar');
+            if (!cal) return;
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay(); // 0 = Minggu
+
+            const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            if ($('month-name')) $('month-name').innerText = `${monthNames[month]} ${year}`;
+
+            let html = '<div class="grid grid-cols-7 gap-1 text-center">';
+            const daysLabel = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            daysLabel.forEach(d => {
+                html += `<div class="text-[9px] font-bold text-slate-400 py-1">${d}</div>`;
+            });
+
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div></div>';
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const pct = monthlyData[dateStr] || 0;
+                const isToday = dateStr === getTodayKey();
+
+                let bgClass = 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400';
+                if (pct === 100) bgClass = 'bg-emerald-500 text-white font-bold';
+                else if (pct >= 70) bgClass = 'bg-teal-500 text-white';
+                else if (pct >= 40) bgClass = 'bg-teal-300 dark:bg-teal-700 text-teal-950 dark:text-white';
+                else if (pct > 0) bgClass = 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200';
+
+                const ringClass = isToday ? 'ring-2 ring-amber-400' : '';
+                html += `
+                <div class="h-7 flex items-center justify-center rounded-lg text-[10px] ${bgClass} ${ringClass}" title="${dateStr}: ${pct}%">
+                    ${d}
+                </div>`;
+            }
+            html += '</div>';
+            cal.innerHTML = html;
         }
-        async function handleRegister() {
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            if (!email || !password) {
-                showStatusModal("Gagal", "Isi email dan password", "error");
+
+        // ======================== MODAL & SEKSI ========================
+        window.openModal = (id) => {
+            const el = $(id);
+            if (el) el.classList.remove('hidden');
+        };
+
+        window.closeModal = (id) => {
+            const el = $(id);
+            if (el) el.classList.add('hidden');
+        };
+
+        window.toggleSection = (id) => {
+            const sec = $(id);
+            const chevron = $('chevron-' + id);
+            if (!sec) return;
+
+            const isOpen = sec.classList.contains('open');
+            if (isOpen) {
+                sec.classList.remove('open');
+                if (chevron) chevron.classList.remove('rotate');
+            } else {
+                sec.classList.add('open');
+                if (chevron) chevron.classList.add('rotate');
+            }
+        };
+
+        // ======================== LAPORAN MINGGUAN & CHART ========================
+        function initOrUpdateWeeklyChart() {
+            const canvas = $('weekly-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const isDark = darkModeEnabled;
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['H-6', 'H-5', 'H-4', 'H-3', 'H-2', 'Kemarin', 'Hari Ini'],
+                    datasets: [{
+                        label: 'Pencapaian (%)',
+                        data: weeklyScores,
+                        backgroundColor: weeklyScores.map(v => v === 100 ? '#10b981' : v >= 50 ? '#0d9488' : '#cbd5e1'),
+                        borderRadius: 8,
+                        barPercentage: 0.65
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            max: 100,
+                            min: 0,
+                            ticks: { stepSize: 25, font: { size: 10 }, color: isDark ? '#94a3b8' : '#64748b' },
+                            grid: { color: isDark ? '#334155' : '#f1f5f9' }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#64748b' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.showReport = () => {
+            const sum = weeklyScores.reduce((a, b) => a + b, 0);
+            const avg = Math.round(sum / 7);
+            if ($('modal-score')) $('modal-score').innerText = `${avg}%`;
+
+            const msgEl = $('modal-msg');
+            if (msgEl) {
+                if (avg >= 85) msgEl.innerText = '🌟 MasyaAllah! Konsistensi ibadah sangat mengagumkan!';
+                else if (avg >= 60) msgEl.innerText = '💪 Bagus sekali! Jaga momentum kebaikan ini.';
+                else if (avg >= 35) msgEl.innerText = '🌱 Cukup baik. Tingkatkan shalat sunnah & tilawah.';
+                else msgEl.innerText = '🤲 Mari mulai kembali hari ini dengan niat tulus.';
+            }
+
+            window.openModal('report-modal');
+            setTimeout(initOrUpdateWeeklyChart, 80);
+        };
+
+        window.showMonthlyReport = () => {
+            const scores = Object.values(monthlyData);
+            if (scores.length > 0) {
+                const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                const perfect = scores.filter(s => s === 100).length;
+                if ($('monthly-avg')) $('monthly-avg').innerText = `${avg}%`;
+                if ($('monthly-perfect')) $('monthly-perfect').innerText = `${perfect} hari`;
+                if ($('monthly-total')) $('monthly-total').innerText = `${scores.length} hari`;
+            } else {
+                if ($('monthly-avg')) $('monthly-avg').innerText = '0%';
+                if ($('monthly-perfect')) $('monthly-perfect').innerText = '0 hari';
+                if ($('monthly-total')) $('monthly-total').innerText = '0 hari';
+            }
+            window.openModal('monthly-report-modal');
+            renderMonthlyCalendar();
+        };
+
+        window.shareToWhatsApp = () => {
+            const percent = $('progress-text') ? $('progress-text').innerText : '0%';
+            const message = `📊 *Moeslem Daily Tracker Pro*%0A✨ Progres Hari Ini: *${percent}*%0A🔥 Streak Konsistensi: *${streakValue} Hari*%0A%0A_"Sebaik-baik amalan adalah yang konsisten walau sedikit."_%0AAlhamdulillah 🤲`;
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        };
+
+        // ======================== BACKUP & RESET ========================
+        window.backupData = async () => {
+            showToast('Menyiapkan file cadangan...', 'info', 1500);
+            const backupObj = {};
+
+            if (isGuestMode || !currentUser) {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('guest_tracker_')) {
+                        const date = k.replace('guest_tracker_', '');
+                        backupObj[date] = JSON.parse(localStorage.getItem(k));
+                    }
+                }
+            } else {
+                try {
+                    const collRef = collection(db, 'users', currentUser.uid, 'daily');
+                    const snap = await getDocs(collRef);
+                    snap.forEach(docSnap => {
+                        backupObj[docSnap.id] = docSnap.data();
+                    });
+                } catch (e) {
+                    showToast('Gagal mengunduh: ' + e.message, 'error');
+                    return;
+                }
+            }
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `moeslem_tracker_backup_${getTodayKey()}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+
+            window.closeModal('data-modal');
+            showToast('Cadangan data berhasil diunduh 📥', 'success');
+        };
+
+        window.resetData = () => {
+            window.closeModal('data-modal');
+            window.openModal('reset-confirm-modal');
+        };
+
+        window.confirmResetData = async () => {
+            window.closeModal('reset-confirm-modal');
+            if (isGuestMode || !currentUser) {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('guest_tracker_')) localStorage.removeItem(k);
+                }
+            } else {
+                try {
+                    const collRef = collection(db, 'users', currentUser.uid, 'daily');
+                    const snap = await getDocs(collRef);
+                    const batch = [];
+                    snap.forEach(docSnap => batch.push(deleteDoc(docSnap.ref)));
+                    await Promise.all(batch);
+                } catch (e) {
+                    showToast('Gagal reset data cloud: ' + e.message, 'error');
+                    return;
+                }
+            }
+
+            currentDailyData = {};
+            currentJournal = "";
+            renderUI();
+            await updateStreakAndWeekly();
+            showToast('Seluruh data berhasil dibersihkan', 'info');
+        };
+
+        window.cancelResetData = () => window.closeModal('reset-confirm-modal');
+
+        // ======================== PROFIL ========================
+        window.openProfileModal = () => {
+            const nameInput = $('edit-name-input');
+            if (nameInput) {
+                nameInput.value = isGuestMode ? (localStorage.getItem('guest_user_name') || 'Tamu') : (currentUser?.displayName || '');
+            }
+            window.openModal('profile-modal');
+        };
+
+        window.saveProfile = async () => {
+            const nameInput = $('edit-name-input');
+            const newName = nameInput ? nameInput.value.trim() : "";
+            if (!newName) {
+                showToast('Nama tidak boleh kosong', 'warning');
                 return;
             }
+
+            if (isGuestMode || !currentUser) {
+                localStorage.setItem('guest_user_name', newName);
+                if ($('user-name')) $('user-name').innerText = newName;
+                if ($('user-avatar')) $('user-avatar').src = `https://ui-avatars.com/api/?background=0f766e&color=fff&bold=true&name=${encodeURIComponent(newName)}`;
+                window.closeModal('profile-modal');
+                showToast('Profil tamu diperbarui', 'success');
+                return;
+            }
+
+            try {
+                await updateProfile(auth.currentUser, { displayName: newName });
+                await setDoc(doc(db, 'users', currentUser.uid), { displayName: newName }, { merge: true });
+                if ($('user-name')) $('user-name').innerText = newName;
+                if ($('user-avatar')) $('user-avatar').src = `https://ui-avatars.com/api/?background=0f766e&color=fff&bold=true&name=${encodeURIComponent(newName)}`;
+                window.closeModal('profile-modal');
+                showToast('Profil diperbarui ✓', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        };
+
+        // ======================== LOGOUT ========================
+        window.logout = () => window.openModal('logout-confirm-modal');
+        window.cancelLogout = () => window.closeModal('logout-confirm-modal');
+        window.confirmLogout = async () => {
+            window.closeModal('logout-confirm-modal');
+            if (isGuestMode) {
+                isGuestMode = false;
+                $('app-screen').classList.add('hidden');
+                $('login-screen').classList.remove('hidden');
+                showToast('Selesai sesi mode tamu', 'info');
+                return;
+            }
+
+            try {
+                if (unsubscribeDaily) unsubscribeDaily();
+                await signOut(auth);
+                showToast('Berhasil keluar akun', 'info');
+            } catch (e) {
+                showToast('Gagal keluar akun', 'error');
+            }
+        };
+
+        // ======================== AUTH HANDLERS ========================
+        function translateAuthError(code) {
+            if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+                return 'Email atau password tidak sesuai.';
+            }
+            if (code.includes('email-already-in-use')) {
+                return 'Email sudah terdaftar. Silakan login.';
+            }
+            if (code.includes('weak-password')) {
+                return 'Password minimal 6 karakter.';
+            }
+            if (code.includes('invalid-email')) {
+                return 'Format email tidak valid.';
+            }
+            return 'Terjadi kendala saat login. Periksa koneksi internet.';
+        }
+
+        async function handleLogin() {
+            const email = $('login-email')?.value.trim();
+            const password = $('login-password')?.value;
+            if (!email || !password) {
+                showToast('Lengkapi email dan password', 'warning');
+                return;
+            }
+
+            const btn = $('login-submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                $('email-login-modal').classList.add('hidden');
+                showToast('Selamat datang kembali! 👋', 'success');
+            } catch (e) {
+                showToast(translateAuthError(e.code || e.message), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Masuk';
+            }
+        }
+
+        async function handleRegister() {
+            const email = $('reg-email')?.value.trim();
+            const password = $('reg-password')?.value;
+            if (!email || !password) {
+                showToast('Isi email dan password pendaftaran', 'warning');
+                return;
+            }
+            if (password.length < 6) {
+                showToast('Kata sandi minimal 6 karakter', 'warning');
+                return;
+            }
+
+            const btn = $('register-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mendaftar...';
+
             try {
                 const userCred = await createUserWithEmailAndPassword(auth, email, password);
                 await setDoc(doc(db, 'users', userCred.user.uid), {
                     email: email,
                     displayName: email.split('@')[0],
-                    createdAt: new Date().toISOString(),
-                    migrated: false
+                    createdAt: new Date().toISOString()
                 });
-                showStatusModal("Berhasil", "Akun terdaftar! Silakan login.", "success");
-                closeEmailModal();
-                document.getElementById('reg-email').value = '';
-                document.getElementById('reg-password').value = '';
-            } catch (error) {
-                showStatusModal("Gagal", error.message, "error");
+                $('email-login-modal').classList.add('hidden');
+                showToast('Pendaftaran sukses! Selamat datang ✨', 'success');
+            } catch (e) {
+                showToast(translateAuthError(e.code || e.message), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Daftar Akun Baru';
             }
         }
-        async function handleLogin() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            if (!email || !password) {
-                showStatusModal("Gagal", "Isi email dan password", "error");
+
+        async function handleResetPassword() {
+            const email = $('login-email')?.value.trim();
+            if (!email) {
+                showToast('Ketik email Anda di kolom email terlebih dahulu', 'warning');
                 return;
             }
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-                closeEmailModal();
-                document.getElementById('login-email').value = '';
-                document.getElementById('login-password').value = '';
-            } catch (error) {
-                showStatusModal("Gagal", error.message, "error");
-            }
-        }
-        async function handleResetPassword() {
-            const email = prompt("Masukkan email Anda untuk reset password:");
-            if (!email) return;
-            try {
                 await sendPasswordResetEmail(auth, email);
-                showStatusModal("Email terkirim", "Cek inbox untuk reset password", "success");
-            } catch (error) {
-                showStatusModal("Gagal", error.message, "error");
+                showToast('Tautan reset terkirim ke email 📧', 'success');
+            } catch (e) {
+                showToast(translateAuthError(e.code || e.message), 'error');
             }
         }
-        
-        function logout() { signOut(auth); }
 
-        function showReport() {
-            const modal = document.getElementById('report-modal');
-            const avgScore = Math.round(weeklyScores.reduce((a,b)=>a+b,0)/7);
-            document.getElementById('modal-score').innerText = avgScore + '%';
-            document.getElementById('modal-msg').innerText = streakValue >= 5 ? "MasyaAllah, konsisten!" : "Tetap semangat!";
-            modal.classList.remove('hidden');
-            const ctx = document.getElementById('weekly-chart').getContext('2d');
-            if (chart) chart.destroy();
-            chart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels: ['H-6','H-5','H-4','H-3','H-2','Kemarin','Hari Ini'], datasets: [{ label: 'Konsistensi (%)', data: weeklyScores, backgroundColor: '#0f766e', borderRadius: 8 }] },
-                options: { responsive: true, maintainAspectRatio: true, scales: { y: { max: 100, min: 0 } } }
-            });
+        function enterGuestMode() {
+            isGuestMode = true;
+            currentUser = null;
+            $('login-screen').classList.add('hidden');
+            $('app-screen').classList.remove('hidden');
+
+            const guestName = localStorage.getItem('guest_user_name') || 'Sobat Istiqomah';
+            if ($('user-name')) $('user-name').innerText = guestName;
+            if ($('user-avatar')) $('user-avatar').src = `https://ui-avatars.com/api/?background=0f766e&color=fff&bold=true&name=${encodeURIComponent(guestName)}`;
+            if ($('user-mode-tag')) {
+                $('user-mode-tag').innerText = 'Offline';
+                $('user-mode-tag').className = 'text-[9px] bg-amber-500/30 text-amber-200 border border-amber-400/40 px-2 py-0.5 rounded-full font-medium';
+            }
+
+            currentViewDate = getTodayKey();
+            if ($('view-date')) $('view-date').value = currentViewDate;
+            loadDataForDate(currentViewDate);
+            updateStreakAndWeekly();
+            showToast('Masuk sebagai Tamu (Data Lokal)', 'info');
         }
 
-        function shareToWhatsApp() {
-            const percent = progressText.innerText;
-            window.open(`https://wa.me/?text=📊 *Habit Tracker*%0A✨ Skor hari ini: ${percent}%0A🔥 Streak: ${streakValue} hari%0A_Istiqomah!_`, '_blank');
-        }
+        // ======================== INISIALISASI ========================
+        function initApp() {
+            applyDarkMode();
 
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function showStatusModal(title, msg, type) {
-            const bg = document.getElementById('status-icon-bg');
-            const ic = document.getElementById('status-icon');
-            document.getElementById('status-title').innerText = title;
-            document.getElementById('status-msg').innerText = msg;
-            if(type === 'success') { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100 text-green-600"; ic.className = "fas fa-check text-2xl"; }
-            else { bg.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-red-100 text-red-600"; ic.className = "fas fa-exclamation text-2xl"; }
-            document.getElementById('status-modal').classList.remove('hidden');
-        }
+            // Tanggal Header
+            if ($('current-date')) {
+                const now = new Date();
+                const opt = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                $('current-date').innerText = now.toLocaleDateString('id-ID', opt);
+            }
 
-        function toggleSection(id) {
-            const sections = ['section-ibadah', 'section-kesehatan', 'section-akhlak'];
-            sections.forEach(sec => {
-                const el = document.getElementById(sec);
-                const c = document.getElementById('chevron-'+sec);
-                if(sec === id) {
-                    const o = el.classList.contains('open');
-                    o ? el.classList.remove('open') : el.classList.add('open');
-                    o ? c.classList.remove('rotate') : c.classList.add('rotate');
-                } else {
-                    el.classList.remove('open');
-                    if(c) c.classList.remove('rotate');
-                }
-            });
-        }
+            // Date Picker Handler
+            const dateInput = $('view-date');
+            if (dateInput) {
+                dateInput.value = currentViewDate;
+                dateInput.max = getTodayKey();
+                dateInput.addEventListener('change', (e) => {
+                    const chosen = e.target.value;
+                    if (chosen > getTodayKey()) {
+                        dateInput.value = currentViewDate;
+                        showToast('Tidak bisa memilih tanggal masa depan', 'warning');
+                        return;
+                    }
+                    currentViewDate = chosen;
+                    loadDataForDate(currentViewDate);
+                });
+            }
 
-        // Date picker handlers
-        function initDatePicker() {
-            const todayStr = getTodayKey();
-            viewDateInput.value = todayStr;
-            viewDateInput.max = todayStr; // tidak boleh pilih tanggal > hari ini
-            viewDateInput.addEventListener('change', async (e) => {
-                const newDate = e.target.value;
-                if (newDate > todayStr) {
-                    viewDateInput.value = currentViewDate;
-                    showStatusModal("Info", "Tidak bisa memilih tanggal di masa depan", "error");
-                    return;
-                }
-                currentViewDate = newDate;
-                if (currentUser) {
-                    subscribeToDate(currentUser.uid, currentViewDate);
-                }
-                renderUI();
-            });
-            todayBtn.addEventListener('click', () => {
-                viewDateInput.value = todayStr;
-                currentViewDate = todayStr;
-                if (currentUser) {
-                    subscribeToDate(currentUser.uid, currentViewDate);
-                }
-                renderUI();
-            });
-        }
-
-        window.onload = () => {
-            document.getElementById('login-email-btn').onclick = showEmailLoginModal;
-            document.getElementById('close-email-modal').onclick = closeEmailModal;
-            document.getElementById('register-btn').onclick = handleRegister;
-            document.getElementById('login-submit-btn').onclick = handleLogin;
-            document.getElementById('reset-password-btn').onclick = handleResetPassword;
-            logoutBtn.onclick = logout;
-            saveJournalBtn.onclick = saveJournal;
-            window.showReport = showReport;
-            window.shareToWhatsApp = shareToWhatsApp;
-            window.openModal = openModal;
-            window.closeModal = closeModal;
-            window.toggleSection = toggleSection;
-            window.backupData = () => showStatusModal("Info", "Data otomatis tersimpan di cloud", "success");
-            window.resetData = () => { if(confirm("Hapus semua data lokal? Data cloud tetap aman")) localStorage.clear(); };
-            currentDateSpan.innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            initDatePicker();
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUser = user;
-                    loginScreen.classList.add('hidden');
-                    appScreen.classList.remove('hidden');
-                    userAvatar.src = 'https://ui-avatars.com/api/?background=0f766e&color=fff&name='+encodeURIComponent(user.displayName || user.email || 'User');
-                    userNameSpan.innerText = user.displayName || user.email;
-                    await migrateLocalStorageToFirestore(user.uid);
-                    // Set view date ke hari ini
+            const todayBtn = $('today-btn');
+            if (todayBtn) {
+                todayBtn.addEventListener('click', () => {
                     currentViewDate = getTodayKey();
-                    viewDateInput.value = currentViewDate;
-                    subscribeToDate(user.uid, currentViewDate);
-                    await updateStreakAndWeekly();
-                } else {
-                    currentUser = null;
-                    if (unsubscribeDaily) unsubscribeDaily();
-                    loginScreen.classList.remove('hidden');
-                    appScreen.classList.add('hidden');
-                }
+                    if (dateInput) dateInput.value = currentViewDate;
+                    loadDataForDate(currentViewDate);
+                    showToast('Menampilkan hari ini ✓', 'info', 1200);
+                });
+            }
+
+            // Event Login
+            $('login-email-btn')?.addEventListener('click', () => {
+                $('email-login-modal').classList.remove('hidden');
+                $('login-email')?.focus();
             });
-        };
-    </script>
-    
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; user-select: none; -webkit-tap-highlight-color: transparent; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-bg { animation: fadeIn 0.3s ease-out; }
-        .modal-box { animation: slideUp 0.3s ease-out; }
-        .accordion-content { transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
-        .accordion-content.open { max-height: 2500px; opacity: 1; }
-        .chevron { transition: transform 0.3s; }
-        .chevron.rotate { transform: rotate(180deg); }
-        .prayer-circle { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
-        .prayer-circle:active { transform: scale(0.9); }
-        .wajib.active { background-color: #0f766e; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.4); }
-        .sunnah-circle.active { background-color: #d97706; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4); }
-        .inactive { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .click-area { cursor: pointer; touch-action: manipulation; }
-    </style>
-</head>
-<body class="bg-slate-100 min-h-screen pb-32 relative">
+            $('close-email-modal')?.addEventListener('click', () => $('email-login-modal').classList.add('hidden'));
+            $('login-submit-btn')?.addEventListener('click', handleLogin);
+            $('register-btn')?.addEventListener('click', handleRegister);
+            $('reset-password-btn')?.addEventListener('click', handleResetPassword);
+            $('login-guest-btn')?.addEventListener('click', enterGuestMode);
 
-    <!-- LAYAR LOGIN -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-teal-700" style="background: linear-gradient(135deg, #0f766e, #115e59);">
-        <div class="text-center px-6 max-w-sm w-full">
-            <i class="fas fa-mosque text-7xl text-white opacity-80 mb-6"></i>
-            <h1 class="text-3xl font-bold text-white mb-2">Moeslem Daily Tracker</h1>
-            <p class="text-teal-100 mb-8">Pantau ibadah, kesehatan & akhlak</p>
-            
-            <button id="login-email-btn" class="bg-teal-600 border border-teal-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-3 w-full active:scale-95 transition">
-                <i class="fas fa-envelope text-white text-xl"></i> Masuk dengan Email
-            </button>
-            
-            <p class="text-xs text-teal-200 mt-8">Data tersimpan aman di cloud & bisa offline</p>
-        </div>
-    </div>
+            // Simpan Jurnal
+            $('save-journal')?.addEventListener('click', window.saveJournal);
 
-    <!-- MODAL LOGIN EMAIL -->
-    <div id="email-login-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
-        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full relative modal-box">
-            <button id="close-email-modal" class="absolute top-3 right-4 text-slate-300 hover:text-slate-500"><i class="fas fa-times"></i></button>
-            <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Login / Daftar</h3>
-            
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
-                <input id="login-email" type="email" class="w-full border border-slate-300 rounded-xl p-2 text-sm">
-            </div>
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Password</label>
-                <input id="login-password" type="password" class="w-full border border-slate-300 rounded-xl p-2 text-sm">
-            </div>
-            <button id="login-submit-btn" class="w-full bg-teal-600 text-white py-2 rounded-xl font-semibold mb-2">Login</button>
-            <button id="reset-password-btn" class="w-full text-teal-600 text-sm py-1">Lupa password?</button>
-            
-            <hr class="my-4">
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Email (Daftar baru)</label>
-                <input id="reg-email" type="email" class="w-full border border-slate-300 rounded-xl p-2 text-sm">
-            </div>
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Password (min 6 karakter)</label>
-                <input id="reg-password" type="password" class="w-full border border-slate-300 rounded-xl p-2 text-sm">
-            </div>
-            <button id="register-btn" class="w-full bg-slate-100 text-slate-700 py-2 rounded-xl font-semibold">Daftar Akun Baru</button>
-        </div>
-    </div>
+            // Tombol Enter pada input password
+            $('login-password')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleLogin();
+            });
+            $('reg-password')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleRegister();
+            });
 
-    <!-- LAYAR UTAMA -->
-    <div id="app-screen" class="hidden">
-        <div class="bg-teal-700 text-white p-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden mb-6">
-            <div class="relative z-10">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight">Moeslim Daily Tracker</h1>
-                        <p class="text-teal-200 text-xs mt-1 opacity-90" id="current-date">...</p>
-                    </div>
-                    <div class="flex gap-2 items-center">
-                        <img id="user-avatar" class="w-10 h-10 rounded-full border-2 border-white" src="" alt="avatar">
-                        <button id="logout-btn" class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center border border-teal-500"><i class="fas fa-sign-out-alt text-teal-100 text-xs"></i></button>
-                    </div>
-                </div>
-                <div class="mt-3 flex justify-between items-center">
-                    <span id="user-name" class="text-sm font-medium"></span>
-                    <span id="streak-badge" class="text-xs bg-teal-800 px-2 py-1 rounded-full"><i class="fas fa-fire"></i> Streak 0 hari</span>
-                </div>
-            </div>
-            <i class="fas fa-leaf absolute -right-8 -bottom-8 text-9xl text-teal-800 opacity-20 transform rotate-12"></i>
-        </div>
+            // Pantau status login Firebase
+            if (isFirebaseAvailable && auth) {
+                onAuthStateChanged(auth, async (user) => {
+                    if (user && !isGuestMode) {
+                        currentUser = user;
+                        $('login-screen').classList.add('hidden');
+                        $('app-screen').classList.remove('hidden');
 
-        <div class="max-w-md mx-auto px-4 relative z-20">
-            <!-- Progress Card -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm mb-5 border border-slate-100">
-                <div class="flex justify-between items-end mb-3">
-                    <div>
-                        <span class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Produktivitas Hari Ini</span>
-                        <div class="text-4xl font-extrabold text-slate-800 mt-1" id="progress-text">0%</div>
-                    </div>
-                    <div id="progress-icon-container" class="h-10 w-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600"><i class="fas fa-chart-pie text-lg"></i></div>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-2"><div id="progress-bar" class="bg-teal-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div></div>
-            </div>
+                        const displayName = user.displayName || user.email?.split('@')[0] || 'Hamba Allah';
+                        if ($('user-name')) $('user-name').innerText = displayName;
+                        if ($('user-avatar')) $('user-avatar').src = `https://ui-avatars.com/api/?background=0f766e&color=fff&bold=true&name=${encodeURIComponent(displayName)}`;
+                        if ($('user-mode-tag')) {
+                            $('user-mode-tag').innerText = 'Cloud';
+                            $('user-mode-tag').className = 'text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-medium';
+                        }
 
-            <!-- Date Picker + Persentase + Tombol Hari Ini -->
-            <div id="view-date-container" class="bg-white rounded-2xl p-3 shadow-sm mb-5 border border-slate-200 flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 flex-1">
-                    <i class="fas fa-calendar-alt text-teal-600"></i>
-                    <input type="date" id="view-date" class="text-sm border-none focus:ring-0 bg-transparent text-slate-700 font-medium">
-                    <span class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded-full" id="view-date-percent">0%</span>
-                </div>
-                <button id="today-btn" class="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-semibold hover:bg-teal-200 transition">Hari Ini</button>
-            </div>
+                        currentViewDate = getTodayKey();
+                        if (dateInput) dateInput.value = currentViewDate;
+                        loadDataForDate(currentViewDate);
+                        await updateStreakAndWeekly();
+                    } else if (!isGuestMode) {
+                        currentUser = null;
+                        if (unsubscribeDaily) unsubscribeDaily();
+                        $('login-screen').classList.remove('hidden');
+                        $('app-screen').classList.add('hidden');
+                    }
+                });
+            }
+        }
 
-            <!-- Jurnal Harian -->
-            <div class="bg-white rounded-2xl p-4 shadow-sm mb-5 border border-slate-100">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider"><i class="fas fa-pen-alt mr-1"></i> Jurnal Harian</span>
-                    <button id="save-journal" class="text-teal-600 text-xs font-semibold bg-teal-50 px-3 py-1 rounded-full">Simpan</button>
-                </div>
-                <textarea id="journal-textarea" rows="2" class="w-full border border-slate-200 rounded-xl p-2 text-sm text-slate-600 focus:outline-none focus:border-teal-300" placeholder="Tulis catatan harianmu..."></textarea>
-            </div>
-
-            <!-- Tombol aksi -->
-            <div class="grid grid-cols-3 gap-3 mb-8">
-                <button onclick="window.showReport()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fas fa-calendar-alt text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Laporan</span></button>
-                <button onclick="window.shareToWhatsApp()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><i class="fas fa-share-nodes text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Bagikan</span></button>
-                <button onclick="window.openModal('data-modal')" class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center"><i class="fas fa-database text-xs"></i></div><span class="text-[10px] font-bold text-slate-600 uppercase">Data</span></button>
-            </div>
-
-            <!-- Ibadah Section -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
-                <button onclick="window.toggleSection('section-ibadah')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
-                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600"><i class="fas fa-mosque"></i></div><div><h3 class="font-bold text-slate-800">Ibadah & Sunnah</h3><span id="count-ibadah" class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span></div></div>
-                    <i id="chevron-section-ibadah" class="fas fa-chevron-down text-slate-300 chevron"></i>
-                </button>
-                <div id="section-ibadah" class="accordion-content bg-slate-50"><div class="p-5 space-y-6">
-                    <div class="bg-white p-4 rounded-xl"><div class="flex justify-between mb-4"><span class="text-xs font-bold text-slate-500">Wajib Berjamaah</span></div><div id="prayer-wajib-container" class="flex justify-between"></div></div>
-                    <div class="bg-white p-4 rounded-xl relative overflow-hidden"><div class="flex justify-between mb-4"><span class="text-xs font-bold text-slate-500">Sunnah Utama</span></div><div id="prayer-sunnah-container" class="flex justify-between"></div></div>
-                    <h4 class="text-[10px] font-bold text-slate-400">Ibadah Tambahan</h4><div id="list-ibadah-extra" class="space-y-2"></div>
-                </div></div>
-            </div>
-
-            <!-- Kesehatan Section -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
-                <button onclick="window.toggleSection('section-kesehatan')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
-                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><i class="fas fa-heart-pulse"></i></div><div><h3 class="font-bold text-slate-800">Kesehatan</h3><span id="count-kesehatan" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span></div></div>
-                    <i id="chevron-section-kesehatan" class="fas fa-chevron-down text-slate-300 chevron"></i>
-                </button>
-                <div id="section-kesehatan" class="accordion-content bg-slate-50"><div class="p-5 space-y-2" id="list-kesehatan"></div><div class="px-5 pb-5"><p class="text-[10px] text-slate-400 italic">*Sumber: AHA, Harvard Health</p></div></div>
-            </div>
-
-            <!-- AKHLAK & SOSIAL Section -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-                <button onclick="window.toggleSection('section-akhlak')" class="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition group">
-                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><i class="fas fa-heart"></i></div><div><h3 class="font-bold text-slate-800">Akhlak & Sosial</h3><span id="count-akhlak" class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md mt-1 inline-block">0/0</span></div></div>
-                    <i id="chevron-section-akhlak" class="fas fa-chevron-down text-slate-300 chevron"></i>
-                </button>
-                <div id="section-akhlak" class="accordion-content bg-slate-50"><div class="p-5 space-y-2" id="list-akhlak"></div></div>
-            </div>
-
-            <div class="text-center py-6 border-t border-slate-200"><p class="text-[10px] text-slate-400">@2026 Ansor.Studio - Mas Ansor</p></div>
-        </div>
-    </div>
-
-    <!-- MODAL REPORT dengan CHART -->
-    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.6);">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full relative modal-box overflow-hidden">
-            <button onclick="window.closeModal('report-modal')" class="absolute top-4 right-4 text-slate-400"><i class="fas fa-times text-xl"></i></button>
-            <h3 class="text-xl font-bold text-slate-800 mb-1 text-center">Laporan Mingguan</h3>
-            <p class="text-xs text-slate-500 text-center mb-4">Konsistensi 7 Hari Terakhir</p>
-            <canvas id="weekly-chart" width="300" height="200" style="max-height: 200px; width:100%"></canvas>
-            <div class="flex justify-center items-center mt-4"><div class="w-20 h-20 rounded-full border-4 border-teal-100 flex items-center justify-center"><span id="modal-score" class="text-2xl font-bold text-teal-600">0%</span></div></div>
-            <p id="modal-msg" class="text-center text-sm font-medium text-slate-700 mb-6 bg-slate-50 p-3 rounded-lg">...</p>
-            <button onclick="window.shareToWhatsApp()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> Bagikan Laporan</button>
-        </div>
-    </div>
-
-    <!-- MODAL DATA -->
-    <div id="data-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);">
-        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full relative modal-box"><button onclick="window.closeModal('data-modal')" class="absolute top-3 right-4 text-slate-300"><i class="fas fa-times"></i></button><h3 class="text-lg font-bold text-slate-800 mb-1 text-center">Data & Backup</h3><p class="text-xs text-slate-500 text-center mb-6">Data otomatis tersimpan di cloud.</p><button onclick="window.backupData()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-3"><i class="fas fa-download text-teal-600"></i><span>Backup Manual (JSON)</span></button><button onclick="window.resetData()" class="w-full border border-red-200 text-red-500 hover:bg-red-50 py-3 rounded-xl mt-4"><i class="fas fa-trash-alt"></i> Reset Lokal</button></div>
-    </div>
-
-    <!-- MODAL STATUS -->
-    <div id="status-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden modal-bg" style="background-color: rgba(0,0,0,0.5);"><div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center modal-box"><div id="status-icon-bg" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i id="status-icon" class="fas fa-check text-2xl"></i></div><h3 id="status-title" class="text-lg font-bold text-slate-800 mb-2">Judul</h3><p id="status-msg" class="text-sm text-slate-600 mb-6">Pesan</p><button onclick="window.closeModal('status-modal')" class="w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl">Oke</button></div></div>
-
-    <script>
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./service-worker.js').catch(err => console.log(err)); }); }
-        window.backupData = function() { alert("Data sudah tersimpan di cloud secara otomatis. Backup manual tidak diperlukan."); };
-        window.resetData = function() { if(confirm("Hapus semua data lokal? (Data cloud tetap aman)")) localStorage.clear(); };
+        // Jalankan saat DOM siap
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 </html>
